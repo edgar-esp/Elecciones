@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+<title>Buffer de la Poblacion</title>
+<link rel="stylesheet" href="https://js.arcgis.com/3.44/dijit/themes/claro/claro.css">
+<link rel="stylesheet" href="https://js.arcgis.com/3.44/esri/css/esri.css">
+<style>
+   html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow:hidden;
+  }
+    #titulo{
+              text-align: center;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 45px;
+              padding-top: 10px;
+              padding-bottom: 10px;
+              color: #FFFFFF;
+    }
+  #leftPane{
+    font-size: 13px; 
+    font-family: Arial, Helvetica, sans-serif;
+    color:#FFFFFF;
+    background-color: #333333;
+    width:252px;
+    padding-bottom:15px;
+  }
+  #map{
+    padding:0;
+  }
+  .details{
+    font-size:14px;
+    font-weight:600;
+   
+  }
+  .TextBlanco
+{
+    font-size: 15px;
+    text-align: center;
+    color: #FFFFFF;
+    background: transparent;
+    border: none;
+}
+  button{
+    margin:2px;
+    cursor:pointer;
+  }
+  .capas{
+    display: block;
+    position: absolute; right: 1%; top: 2%; 
+    z-index: 3;
+    background-color: #ffffff7c;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#000000;
+    border-radius: 10px; 
+    padding: 10px;
+    /*top: 20px;
+    left: 75px;*/
+  }
+   #Zonapolitica{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    position: absolute; left: 25%; bottom: 0%; 
+    z-index: 3;
+    background-color: #ffffff00;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#000000;
+    border-radius: 10px; 
+    padding: 10px;
+   /* margin: 50px; esto me separo el fondo */
+    
+   }
+  
+  .simbologia{
+    display: none;
+    position: absolute; right: 1%; top: 11%; 
+    z-index: 3;
+    background-color: #ffffff7c;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#000000;
+    border-radius: 10px; 
+    padding: 10px;
+  }
+  #emoticon{
+    font-size: 30px;
+  }
+  #search {
+      display: block;
+      position: absolute;
+      z-index: 2;
+      top: 20px;
+      left: 74px;
+    }
+    .chart-container {
+  position: relative;
+  margin: auto;
+  height: 220px;
+  width: 250px;
+  border-radius: 10px; margin-right: 30px; background-color: #ffffffa6;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://js.arcgis.com/3.44/"></script>
+<script>
+  // Enable WebGL on FeatureLayer for faster renderer updates and display of more features in the map
+  var dojoConfig = {
+    has: {
+      "esri-featurelayer-webgl": 1
+    }
+  }
+</script>
+<script>
+var map, tb, Lnominal = 0, votaron = 0,  Lnominal16 = 0, Tvot16 = 0, Lnominal18 = 0, Tvot18 = 0;
+let myChart, myChart1, myChart2;
+
+require(["dojo/dom",
+        "dojo/_base/array",
+        "esri/layers/FeatureLayer",
+        "dojo/parser",
+        "dojo/query",
+        "dojo/on",
+        "dojo/_base/array",
+        "esri/Color",
+        "esri/config",
+        "esri/map","esri/dijit/BasemapGallery", "esri/arcgis/utils",  "esri/dijit/Search", "esri/InfoTemplate",
+        "esri/graphic",
+        "esri/geometry/normalizeUtils",
+        "esri/tasks/GeometryService",
+        "esri/tasks/BufferParameters",
+        "esri/tasks/query",
+        "esri/tasks/QueryTask",
+        "esri/toolbars/draw",
+        "esri/geometry/geometryEngine",
+        "esri/symbols/SimpleMarkerSymbol", "esri/symbols/PictureMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+        "esri/renderers/SimpleRenderer",
+
+        "dijit/layout/BorderContainer",
+        "dijit/layout/ContentPane",
+        "dijit/form/Button", "dijit/TitlePane", "dojo/domReady!",
+        "esri/geometry/webMercatorUtils"
+        ],
+      function(dom, array, FeatureLayer, parser, query, on, arrayUtils,  Color, esriConfig, Map,  BasemapGallery, arcgisUtils, Search, InfoTemplate, Graphic, normalizeUtils, GeometryService, BufferParameters, Query, QueryTask, Draw, geometryEngine, SimpleMarkerSymbol, PictureMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, SimpleRenderer, webMercatorUtils){
+
+        parser.parse();
+       // esriConfig.apiKey = "AAPKce5d5c44d0a04f57a78a5ab05bb2cad5IJTCux8fJuM0mN7CUycQJTBsCqFXnJHvg8-QaPBFqim41ghkvLZGOk3q4s1YKLir";
+        esriConfig.defaults.geometryService = new GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+       //Setup button click handlers
+        //click handler for the draw tool buttons
+        query(".tool").on("click", function(evt){
+          if(tb){
+           tb.activate(evt.target.id);
+          }
+        });
+
+        map = new Map("map", {
+          basemap: "topo",
+          showLabels : true,
+          center: [-97.486052, 18.930348], 
+          zoom: 8
+        }); 
+        //add the basemap gallery, in this case we'll display maps from ArcGIS.com including bing maps
+      var basemapGallery = new BasemapGallery({
+        showArcGISBasemaps: true,
+        map: map
+      }, "basemapGallery");
+      basemapGallery.startup();
+
+      basemapGallery.on("error", function(msg) {
+        console.log("basemap gallery error:  ", msg);
+      });
+   
+        var featureLayer = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json",{
+          opacity: 0.9,        
+          outFields: ["Shape"]
+      });
+      var featureLayer2 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/2?f=json",{
+        opacity: 0.9,
+        outFields: ["Shape"]
+      });
+    
+      var featureLayer3 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/3?f=json",{
+       // mode: FeatureLayer.MODE_SELECTION,
+        opacity: 0.9,
+        //showLabels : true,
+        outFields: ["*"]
+      });
+      //console.log(milliseconds);
+      var featureLayer4 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/4?f=json",{
+       // mode: FeatureLayer.MODE_SELECTION,
+        opacity: 1,
+        //showLabels : true,
+        outFields: ["Shape"]
+      });
+      var featureLayer5 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/5?f=json",{
+          opacity: 1,        
+          outFields: ["Shape"]
+      });
+      var featureLayer6 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/6?f=json",{
+          opacity: 1,        
+          outFields: ["Shape"]
+      });
+      var featureLayer7 = new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/7?f=json",{
+          opacity: 1,        
+          outFields: ["Shape"]
+      });
+      //BUSQUEDA
+      var simbolo = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,255,255]), 2), new dojo.Color([255,255,255,0.05]));//new PictureMarkerSymbol("/images/Svoto.png", 36, 36).setOffset(9, 18)
+      var search = new Search({
+        enableButtonMode: false, //this enables the search widget to display as a single button
+        enableLabel: false,
+        enableInfoWindow: true,
+        showInfoWindowOnSelect: false,
+        defaultSource: sources,
+        map: map
+      }, "search");
+      var sources = search.get("sources");
+      sources.push({
+        featureLayer: new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json"),
+        searchFields: ["NOMGEO"],
+        displayField: "NOMGEO",
+        exactMatch: false,
+        outFields: ["NOMGEO"],
+        name: "Municipios de Puebla",
+        placeholder: "Buscar Municipio",
+        maxResults: 10,
+        maxSuggestions: 20,
+        enableSuggestions: true,
+        minCharacters: 1,
+        highlightSymbol: simbolo,
+        infoTemplate: new InfoTemplate("${NOMGEO}", "<b>INFORMACION EN FORMATO DE TEXTO</b>")
+      });
+      search.set("sources", sources);
+      search.startup();
+      search.on("search-results", function(){
+        document.getElementById("Contenedor").style.display= "block";
+        var queryPobTot = new Query(); //SE DECLARAN LAS OPCIONES DE CONSULTA
+           queryPobTot.outFields = ["*"];
+           queryPobTot.where = "NOMGEO = '" + search.value + "'";
+           //queryPobTot.geometry = features[0];
+           queryPobTot.outSpatialReference = this.map.spatialReference;
+           queryPobTot.returnGeometry = false;
+        var queryAnalf = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/0?f=json");
+        queryAnalf.execute(queryPobTot, Poblacion); 
+        var query2016 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json");
+        query2016.execute(queryPobTot, Elecciones16);
+        var query2018 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/2?f=json");
+        query2018.execute(queryPobTot, Elecciones18);
+        var queryTPobTot = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/3?f=json");
+        queryTPobTot.execute(queryPobTot, Elecciones19);
+        dom.byId("txtkm").value = "Solo Dibujo"
+      });
+      //AÑADE CAPAS
+      map.addLayer(featureLayer3);
+      map.addLayer(featureLayer4);
+      // map.infoWindow.resize(155,75);
+      //map.addLayer(featureLayer5);
+      //map.addLayer(featureLayer6);
+      //map.addLayer(featureLayer7);
+      /*********************TRANSPERENCIAS********************/
+       on(dom.byId("transp16"), "mouseup", function(){
+       var transparency16 = document.getElementById("transp16").value;
+       document.getElementById("transp16").title = document.getElementById("transp16").value;
+       var opaco16 = (parseFloat(transparency16)/10); 
+       featureLayer.setOpacity(opaco16)
+      });
+       on(dom.byId("transp18"), "mouseup", function(){
+       var transparency18 = document.getElementById("transp18").value;
+       document.getElementById("transp18").title = document.getElementById("transp18").value;
+       var opaco18 = (parseFloat(transparency18)/10); 
+       featureLayer2.setOpacity(opaco18)
+      });
+       on(dom.byId("transp19"), "mouseup", function(){
+       var transparency19 = document.getElementById("transp19").value;
+       document.getElementById("transp19").title = document.getElementById("transp19").value;
+       var opaco19 = (parseFloat(transparency19)/10); 
+       featureLayer3.setOpacity(opaco19)
+      });
+    /**********SELECCION DE CAPAS********************/
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        // Agrega un event listener a cada casilla de verificación
+        checkboxes.forEach(checkbox => {
+          checkbox.addEventListener('click', function () {
+            // Desmarca todas las casillas de verificación
+            checkboxes.forEach(cb => {
+              if (cb !== this) {
+                cb.checked = false;
+              }
+            });
+          });
+        });
+      on(dom.byId("capas"), "click", function(){
+        var Nvotaron = 0, porcentaje16 = 0, Nporcentaje16 = 0;
+        var checkBox = document.getElementById("capa");
+        var RNominal16 = 0, RNominal18 = 0;
+            if(checkBox.checked == true ){
+              map.addLayer(featureLayer);
+              featureLayer4.refresh();
+              dom.byId("Simb16").style.display = "block"
+              RNominal16 = (Lnominal16 / 4291093) * 100;
+              var Nvotaron = Lnominal16 - Tvot16;
+              porcentaje16 = (Tvot16 / Lnominal16) * 100; Nporcentaje16 = (Nvotaron / Lnominal16) * 100;
+              var dataChart16 = [];
+                    dataChart16.push(porcentaje16);
+                    dataChart16.push(Nporcentaje16);
+                   //Grafico PASTEL----------------------------------------------------
+                   document.getElementById("votos").style.display = "block"; 
+                    var ctx = document.getElementById("votos").getContext('2d');
+                    const labels = ['% Población Que Sí Participó', '% Población Que No Participó'];
+                    if (myChart1) {
+                    //  myChart.clear();
+                     myChart1.destroy();
+                      }
+                     myChart1 = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                          datasets: [{ 
+                                data: dataChart16,                            
+                                backgroundColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderWidth: 1,
+                                //label: '%'
+                            }],
+                            labels: [dataChart16[0].toFixed(2)+" % Población Que Sí Participó", dataChart16[1].toFixed(2)+" % Población Que No Participó"],                         
+                        },
+                        options: {   
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          aspectRatio: 1.0,                       
+                            cutoutPercentage: 0,
+                            tooltips: {
+                            callbacks: {
+                              label: function (tooltipItem, data) {
+                                return data.labels[tooltipItem.index] + ": hola " +
+                                  formatter.format(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]);
+                              }
+                            }
+                          },
+                            plugins: {
+                            title: {
+                              display: true,
+                              text: 'Participación Ciudadana',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
+                            }
+                          }
+                        }
+                    });
+            //Codigo Indicador Lista Nominal--------------------------------------------------------------     
+                    var data = [
+                {
+                  type: "indicator",
+                  mode: "gauge+number",//agregar delta "+delta"
+                  value: RNominal16,
+                  number: { suffix: "%" },
+                  title: { text: "<b>Lista Nominal</b>", font: { size: 21 } },
+                  //delta: { reference: 50, increasing: { color: "RebeccaPurple" }},
+                  gauge: {
+                    axis: { range: [null, 100], tickwidth: 2, tickcolor: "darkblue" },
+                    bar: { color: "darkblue" },
+                    bgcolor: "white",
+                    borderwidth: 3,
+                    bordercolor: "gray",
+                  }
+                }
+              ];
+              
+              var layout = {
+                width: 200,
+                height: 200,
+                margin: { t: 25, r: 30, l: 20, b: 10 },
+                paper_bgcolor: "#ffffff00",
+                font: { color: "black", family: "Arial" }
+              };
+              Plotly.react("indicador", data, layout);
+            }else{
+              map.removeLayer(featureLayer);
+              RNominal16 = 0;
+              dom.byId("Simb16").style.display = "none"
+          }
+          var checkBox2 = document.getElementById("capa2");
+          
+        if (checkBox2.checked == true) {
+          map.addLayer(featureLayer2);  featureLayer4.refresh();
+          dom.byId("Simb18").style.display = "block"
+          var Nvotaron18 = 0, porcentaje18 = 0, Nporcentaje18 = 0;
+          RNominal18 = (Lnominal18 / 4500580) * 100;
+           Nvotaron18 = Lnominal18 - Tvot18;
+              var porcentaje18 = (Tvot18 / Lnominal18) * 100; Nporcentaje18 = (Nvotaron18 / Lnominal18) * 100;
+              var dataChart18 = [];
+                    dataChart18.push(porcentaje18);
+                    dataChart18.push(Nporcentaje18);
+                   //Grafico PASTEL----------------------------------------------------
+                   document.getElementById("votos").style.display = "block"; 
+                    var ctx = document.getElementById("votos").getContext('2d');
+                    const labels = ['% Población Que Sí Participó', '% Población Que No Participó'];
+                    if (myChart1) {
+                    //  myChart.clear();
+                     myChart1.destroy();
+                      }
+                     myChart1 = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                          datasets: [{ 
+                                data: dataChart18,                            
+                                backgroundColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderWidth: 1,
+                                //label: '%'
+                            }],
+                            labels: [dataChart18[0].toFixed(2)+" % Población Que Sí Participó", dataChart18[1].toFixed(2)+" % Población Que No Participó"],                           
+                        },
+                        options: {   
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          aspectRatio: 1.0,                       
+                            cutoutPercentage: 0,
+                            tooltips: {
+                            callbacks: {
+                              label: function (tooltipItem, data) {
+                                return data.labels[tooltipItem.index] + ": hola " +
+                                  formatter.format(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]);
+                              }
+                            }
+                          },
+                            plugins: {
+                            title: {
+                              display: true,
+                              text: 'Participación Ciudadana',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
+                            }
+                          }
+                        }
+                    });
+            //Codigo Indicador Lista Nominal--------------------------------------------------------------          
+                    var data = [
+                {
+                  type: "indicator",
+                  mode: "gauge+number",//agregar delta "+delta"
+                  value: RNominal18,
+                  number: { suffix: "%" },
+                  title: {text: "<b>Lista Nominal</b>", font: { size: 21 } },
+                  //delta: { reference: 50, increasing: { color: "RebeccaPurple" }},
+                  gauge: {
+                    axis: { range: [null, 100], tickwidth: 2, tickcolor: "darkblue" },
+                    bar: { color: "darkblue" },
+                    bgcolor: "white",
+                    borderwidth: 3,
+                    bordercolor: "gray",
+                  }
+                }
+              ];
+
+              var layout = {
+                width: 200,
+                height: 200,
+                margin: { t: 25, r: 30, l: 20, b: 10 },
+                paper_bgcolor: "#ffffff00",
+                font: { color: "black", family: "Arial" }
+              };
+
+              Plotly.react("indicador", data, layout);
+        } else {
+          map.removeLayer(featureLayer2);
+          dom.byId("Simb18").style.display = "none"
+        }
+        var checkBox3 = document.getElementById("capa3");
+            if(checkBox3.checked == true ){
+              map.addLayer(featureLayer3);  featureLayer4.refresh();
+              dom.byId("Simb19").style.display = "block"
+             var RNominal19 = 0;
+               var Nvotaron = Lnominal - votaron;
+              porcentaje = (votaron / Lnominal) * 100; Nporcentaje = (Nvotaron / Lnominal) * 100;
+              var dataChart = [];
+              dataChart.push(porcentaje);
+                    dataChart.push(Nporcentaje);
+                    var RNominal19 = (Lnominal / 4584484) * 100;
+                    //Grafico PASTEL----------------------------------------------------
+                   document.getElementById("votos").style.display = "block"; 
+                    var ctx = document.getElementById("votos").getContext('2d');
+                    const labels = ['% Población Que Sí Participó', '% Población Que No Participó'];
+                    if (myChart1) {
+                    //  myChart.clear();
+                     myChart1.destroy();
+                      }
+                     myChart1 = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                          datasets: [{ 
+                                data: dataChart,                            
+                                backgroundColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderWidth: 1,
+                                //label: '%'
+                            }],
+                            labels: [dataChart[0].toFixed(2)+" % Población Que Sí Participó", dataChart[1].toFixed(2)+" % Población Que No Participó"],                           
+                        },
+                        options: {   
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          aspectRatio: 1.0,                       
+                            cutoutPercentage: 0,
+                            tooltips: {
+                            callbacks: {
+                              label: function (tooltipItem, data) {
+                                return data.labels[tooltipItem.index] + ": hola " +
+                                  formatter.format(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]);
+                              }
+                            }
+                          },
+                            plugins: {
+                            title: {
+                              display: true,
+                              text: 'Participación Ciudadana',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
+                            }
+                          }
+                        }
+                    });
+            //Codigo Indicador Lista Nominal--------------------------------------------------------------
+                    var data = [
+                {
+                  type: "indicator",
+                  mode: "gauge+number",//agregar delta "+delta"
+                  value: RNominal19,
+                  number: { suffix: "%" },
+                  title: { text: "<b>Lista Nominal</b>", font: { size: 21 } },
+                  //delta: { reference: 50, increasing: { color: "RebeccaPurple" }},
+                  gauge: {
+                    axis: { range: [null, 100], tickwidth: 2, tickcolor: "darkblue" },
+                    bar: { color: "darkblue" },
+                    bgcolor: "white",
+                    borderwidth: 3,
+                    bordercolor: "gray",
+                  }
+                }
+              ];
+
+              var layout = {
+                width: 200,
+                height: 200,
+                margin: { t: 25, r: 30, l: 20, b: 10 },
+                paper_bgcolor: "#ffffff00",
+                font: { color: "black", family: "Arial" }
+              };
+
+              Plotly.react("indicador", data, layout);
+            }else{
+              map.removeLayer(featureLayer3);
+              dom.byId("Simb19").style.display = "none"
+          }
+      });
+
+      map.on("load", initToolbar);
+      function initToolbar(evtObj) {
+        tb = new Draw(evtObj.map);
+        tb.on("draw-end", doBuffer);
+      }
+      function doBuffer(evtObj) {
+            this.map.graphics.clear();
+            dom.byId("txtkm").value = "calculando..."
+            dom.byId("pobTP").value = "calculando...";
+            dom.byId("TmunSel").value = "calculando...";
+            dom.byId("SP").value = "calculando...";
+            dom.byId("SinSalud").value = "calculando...";
+            dom.byId("SitPob").value = "calculando...";
+            
+            document.getElementById("Contenedor").style.display= "block";
+        tb.deactivate();
+        var geometry = evtObj.geometry, symbol;
+        switch (geometry.type) {
+           case "point":
+             symbol = new SimpleMarkerSymbol(SimpleFillSymbol.STYLE_SOLID, 30, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 255, 255]), 1), new Color([0, 0, 0, 0.35]));
+             break;
+           case "polyline":
+             symbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_DASH, new Color([255,255,255]), 1);
+             break;
+           case "polygon":
+             symbol = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255, 255, 255]), 2), new Color([0, 0, 0, 0.35]));
+             break;
+        }
+
+          var graphic = new Graphic(geometry, symbol);
+          map.graphics.add(graphic);
+          
+        
+        var area = geometryEngine.geodesicArea(geometryEngine.simplify(graphic.geometry), "square-kilometers");
+        //console.log(area);
+        dom.byId("txtkm").value = parseInt(area).toLocaleString();  //Muestra los KM2
+          //setup the buffer parameters
+         // var customarea = parseInt(document.getElementById("txtkm").value);
+          var params = new BufferParameters();
+            params.distances = [0];
+            params.outSpatialReference = this.map.spatialReference;
+            params.unit = GeometryService.UNIT_KILOMETER; //GeometryService[dom.byId("unit").value];
+            params.geometries = [geometry];
+            //console.log(params.distances = [dom.byId("txtkm").value]) 
+            esriConfig.defaults.geometryService.buffer(params, function(features) {
+                var symbol = new SimpleFillSymbol(
+                    SimpleFillSymbol.STYLE_SOLID,
+                    new SimpleLineSymbol(
+                        SimpleLineSymbol.STYLE_SOLID,
+                        new Color([255, 255, 255, 0.9]), 2
+                    ),
+                    new Color([0, 0, 0, 0.20])
+                );
+
+                arrayUtils.forEach(features, function(geometry) {
+                    var graphic = new Graphic(geometry, symbol);
+                    this.map.graphics.add(graphic);
+                });
+           //var fuerzaP19 = []; var fuerzaP18 = []; var fuerzaP16 = [];  SE DECLARAN LOS ARRAY PARA INTRODUCIR LOS NOMBRES DE PARTIDOS
+           var queryPobTot = new Query(); //SE DECLARAN LAS OPCIONES DE CONSULTA
+                queryPobTot.outFields = ["*"];
+                queryPobTot.geometry = features[0];
+                queryPobTot.outSpatialReference = this.map.spatialReference;
+                queryPobTot.returnGeometry = true;
+           //SE INICIA LA CONSULTA DE LA INFO DE LAS CAPAS     
+                var queryTPobTot = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/3?f=json");
+                  queryTPobTot.execute(queryPobTot, Elecciones19);
+                var queryAnalf = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/0?f=json");
+                  queryAnalf.execute(queryPobTot, Poblacion);
+                var query2018 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/2?f=json");
+                  query2018.execute(queryPobTot, Elecciones18);
+                var query2016 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json");
+                  query2016.execute(queryPobTot, Elecciones16);
+                map.graphics.clear();
+            });
+        }
+        function Poblacion(queryResults){
+          var pob15Analf = 0, SM_VIV = 0, SinServ = 0, SitPob = 0, POP = 0;
+                    if (queryResults.features.length == 0) {
+                        document.getElementById("Contenedor").style.display= "none";
+                        alert("Error!, Esta Zona No Contiene Datos");
+                    } else {
+                        arrayUtils.forEach(queryResults.features, function(feature) {
+                          var P15omasAnalf = feature.attributes["POP_2020"];
+                          pob15Analf += P15omasAnalf;
+                          var PSINDER = feature.attributes["PSINDER"];
+                          SinServ += PSINDER;
+                          var POBRES20 = feature.attributes["POBRES_2020"];
+                          SitPob += POBRES20;
+                          var POB_20 = feature.attributes["POP_POBREZA_2020"];
+                          POP += POB_20;
+                         var salario = (feature.attributes["SALARIO_MENSUAL_VIVIENDA"]*feature.attributes["POP_2020"]);
+                          SM_VIV += salario;
+                          //var SM_MUN = (SM_VIV*pob15Analf)/pob15Analf;
+                          //map.graphics.clear();
+                        });
+                    }
+                       var salariotot = Math.round(SM_VIV/pob15Analf);
+                       var Servicios = (SinServ/pob15Analf)*100;
+                       var SITPOB = (SitPob/POP)*100;
+                       dom.byId("SP").value = "$ " + salariotot.toLocaleString(2);
+                 //  console.log(SM_MUN);
+                    dom.byId("pobTP").value = pob15Analf.toLocaleString();
+                    dom.byId("SitPob").value = (SITPOB.toFixed(1)).toLocaleString() + " %";
+                    dom.byId("SinSalud").value = (Servicios.toFixed(1)).toLocaleString() + " %";
+        }
+        
+        function Elecciones16(queryResults){
+          var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, PANAL= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, INP= 0, coali1 = 0, coali2 = 0;
+                  Lnominal16 = 0; Tvot16 = 0;
+                    if (queryResults.features.length == 0) {
+                      document.getElementById("Contenedor").style.display= "none";
+                    } else {
+                       // map.graphics.clear();
+                        arrayUtils.forEach(queryResults.features, function(feature) {
+                          //fuerzaP16.push(feature.attributes["COALICION_O_PARTIDO_GANADOR"]);
+                          //Calculo de partido politico con mas votos
+                          var  infoTemplate = new esri.InfoTemplate(feature.attributes["MUNICIPIO"], "iNFORMACION EN FORMATO DE TEXTO" );
+                          var geometria = feature.geometry;
+                          var graphic = new Graphic(geometria, new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,255,255]), 2), new dojo.Color([255,255,255,0.05])));
+                          graphic.setInfoTemplate(infoTemplate);
+                          map.graphics.add(graphic);
+                          
+                          var lista = feature.attributes["LISTA_NOMINAL"];
+                          Lnominal16 += lista;
+                          var PANCOMPLETO = feature.attributes["PAN_COMPLETO"];
+                          PAN += PANCOMPLETO;
+                          var PRICOMPLETO = feature.attributes["PRI_COMPLETO"];
+                          PRI += PRICOMPLETO;
+                          var PRDCOMPLETO = feature.attributes["PRD_COMPLETO"];
+                          PRD += PRDCOMPLETO;
+                          var PTCOMPLETO = feature.attributes["PT_COMPLETO"];
+                          PT += PTCOMPLETO;
+                          var PVCOMPLETO = feature.attributes["PVEM_COMPLETO"];
+                          PVEM += PVCOMPLETO;
+                          var PANALCOMPLETO = feature.attributes["PANAL_COMPLETO"];
+                          PANAL += PANALCOMPLETO;
+                          var PCPPCOMPLETO = feature.attributes["PCPP_COMPLETO"];
+                          PCPP += PCPPCOMPLETO;
+                          var PSICOMPLETO = feature.attributes["PSI_COMPLETO"];
+                          PSI += PSICOMPLETO;
+                          var MORCOMPLETO = feature.attributes["MORENA_COMPLETO"];
+                          MORENA += MORCOMPLETO;
+                          var ESCOMPLETO = feature.attributes["ES_COMPLETO"];
+                          ES += ESCOMPLETO;
+                          var INDCOMPLETO = feature.attributes["INDEPENDIENTES_COMPLETO"];
+                          INP += INDCOMPLETO;
+                          var TOTAL = feature.attributes["TOTAL_VOTOS"];
+                          Tvot16 += TOTAL;
+                          //Calculo de coalisiones 
+                          var coali1Completo = feature.attributes["PAN_PT_PANAL_PCPP_PSI_COMPLETO"];
+                          coali1 += coali1Completo;
+                          var coali2Completo = feature.attributes["PRI_PVEM_ES_COMPLETO"];
+                          coali2 += coali2Completo;
+
+                        });
+                        dojo.connect(map.graphics, "onMouseMove", function (evt) {
+                            var g = evt.graphic;
+                            map.infoWindow.setContent(g.getContent());
+                            map.infoWindow.setTitle(g.getTitle());
+                            map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
+                          });
+                          dojo.connect(map.graphics, "onMouseOut", function () { map.infoWindow.hide(); });
+                    }
+                   
+                    var valorMasGrande = PAN; // Suponemos que el primer número es el más grande inicialmente
+                    var fuerzaP = "PAN";
+                    document.getElementById("FP16").src = "./images/PAN.png";document.getElementById("CG16").src = "./images/PAN.png"; dom.byId("P16").value = ((PAN/Tvot16)*100).toLocaleString() + "%";
+                  // Comparar cada variable con la actual más grande y actualizar si se encuentra un valor más grande
+                  if (PRI > valorMasGrande)  {valorMasGrande = PRI; fuerzaP = "PRI";  document.getElementById("FP16").src = "./images/PRI.png"; dom.byId("P16").value = ((PRI/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/PRI.png";}
+                  if (PRD > valorMasGrande)  {valorMasGrande = PRD; fuerzaP = "PRD";  document.getElementById("FP16").src = "./images/PRD.png"; dom.byId("P16").value = ((PRD/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/PRD.png";dom.byId("CGP16").value = ((PRD/Tvot)*100).toLocaleString() + "%";}
+                  if (PT > valorMasGrande)   {valorMasGrande = PT; fuerzaP = "PT";  document.getElementById("FP16").src = "./images/PT.png"; dom.byId("P16").value = ((PT/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/PT.png";}
+                  if (PVEM > valorMasGrande) {valorMasGrande = PVEM; fuerzaP = "PVEM";  }
+                  if (PANAL > valorMasGrande){valorMasGrande = PANAL; fuerzaP = "PANAL"; document.getElementById("FP16").src = "./images/PANAL.png"; dom.byId("P16").value = ((PANAL/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/PANAL.png"; }
+                  if (PCPP > valorMasGrande) {valorMasGrande = PCPP;  fuerzaP = "PCPP";  }
+                  if (PSI > valorMasGrande)  {valorMasGrande = PSI; fuerzaP = "PSI"; document.getElementById("FP16").src = "./images/PSI.png"; dom.byId("P16").value = ((PSI/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/PSI.png"; }
+                  if (MORENA > valorMasGrande){valorMasGrande = MORENA;   fuerzaP = "MORENA";  document.getElementById("FP16").src = "./images/MORENA.png"; dom.byId("P16").value = ((MORENA/Tvot16)*100).toLocaleString() + "%";document.getElementById("CG16").src = "./images/MORENA.png";}
+                  if (ES > valorMasGrande)   {valorMasGrande = ES; fuerzaP = "ENCUENTRO SOCIAL";  }
+                  if (INP > valorMasGrande)  {valorMasGrande = INP;  fuerzaP = "INP"; } 
+                  //Se define cual es la candidatura o coalision ganadora
+                  var VMG = valorMasGrande;
+                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG16").src = "./images/PAN_PT_PANAL_PCPP_PSI.png"; dom.byId("CGP16").value = ((coali1/Tvot16)*100).toLocaleString() + "%";};
+                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG16").src = "./images/PRI_PVEM_ES.png"; dom.byId("CGP16").value = ((coali2/Tvot16)*100).toLocaleString() + "%";};
+                 
+        }
+
+        function Elecciones18(queryResults){
+          var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, TOTv = 0,coali1 = 0, coali2 = 0;
+                  Lnominal18 = 0, Tvot18 = 0
+                  if (queryResults.features.length == 0) {
+                    document.getElementById("Contenedor").style.display= "none";
+                    } else {
+                        arrayUtils.forEach(queryResults.features, function(feature) {
+                          //fuerzaP18.push(feature.attributes["COALICION_O_PARTIDO_GANADOR"]);
+                          var lista = feature.attributes["LISTA_NOMINAL"];
+                          Lnominal18 += lista;
+                          var PANCOMPLETO = feature.attributes["PAN_COMPLETO"];
+                          PAN += PANCOMPLETO;
+                          var PRICOMPLETO = feature.attributes["PRI_COMPLETO"];
+                          PRI += PRICOMPLETO;
+                          var PRDCOMPLETO = feature.attributes["PRD_COMPLETO"];
+                          PRD += PRDCOMPLETO;
+                          var PTCOMPLETO = feature.attributes["PT_COMPLETO"];
+                          PT += PTCOMPLETO;
+                          var PVCOMPLETO = feature.attributes["PVEM_COMPLETO"];
+                          PVEM += PVCOMPLETO;
+                          var MCCOMPLETO = feature.attributes["MC_COMPLETO"];
+                          MC += MCCOMPLETO;
+                          var PCPPCOMPLETO = feature.attributes["PCPP_COMPLETO"];
+                          PCPP += PCPPCOMPLETO;
+                          var PSICOMPLETO = feature.attributes["PSI_COMPLETO"];
+                          PSI += PSICOMPLETO;
+                          var MORCOMPLETO = feature.attributes["MORENA_COMPLETO"];
+                          MORENA += MORCOMPLETO;
+                          var ESCOMPLETO = feature.attributes["ES_COMPLETO"];
+                          ES += ESCOMPLETO;
+                          var TOTALV = feature.attributes["TOTAL_VOTOS"];
+                          Tvot18 += TOTALV;
+                           //Calculo de coalisiones 
+                           var coali1Completo = feature.attributes["PAN_PRD_MC_PCPP_PSI_COMPLETO"];
+                          coali1 += coali1Completo;
+                          var coali2Completo = feature.attributes["PT_MORENA_ES_COMPLETO"];
+                          coali2 += coali2Completo;
+                        });
+                    }
+                    var valorMasGrande = PAN; // Suponemos que el primer número es el más grande inicialmente
+                    var fuerzaP = "PAN";
+                    document.getElementById("FP18").src = "./images/PAN.png"; dom.byId("P18").value = ((PAN/Tvot18)*100).toLocaleString() + "%";
+                  // Comparar cada variable con la actual más grande y actualizar si se encuentra un valor más grande
+                  if (PRI > valorMasGrande)  {valorMasGrande = PRI; fuerzaP = "PRI";document.getElementById("FP18").src = "./images/PRI.png"; dom.byId("P18").value = ((PRI/Tvot18)*100).toLocaleString() + "%";document.getElementById("CG18").src = "./images/PRI.png";dom.byId("CGP18").value = ((PRI/TOTv)*100).toLocaleString() + "%";}
+                  if (PRD > valorMasGrande)  {valorMasGrande = PRD; fuerzaP = "PRD";  document.getElementById("FP18").src = "./images/PRD.png"; dom.byId("P18").value = ((PRD/Tvot18)*100).toLocaleString() + "%";}
+                  if (PT > valorMasGrande)   {valorMasGrande = PT; fuerzaP = "PT"; document.getElementById("FP18").src = "./images/PT.png"; dom.byId("P18").value = ((PT/Tvot18)*100).toLocaleString() + "%";}
+                  if (PVEM > valorMasGrande) {valorMasGrande = PVEM; fuerzaP = "PVEM"; document.getElementById("FP18").src = "./images/PVEM.png"; dom.byId("P18").value = ((PVEM/Tvot18)*100).toLocaleString() + "%";document.getElementById("CG18").src = "./images/PVEM.png";dom.byId("CGP18").value = ((PVEM/TOTv)*100).toLocaleString() + "%";}
+                  if (MC > valorMasGrande){valorMasGrande = MC; fuerzaP = "MC";  document.getElementById("FP18").src = "./images/MC.png"; dom.byId("P18").value = ((MC/Tvot18)*100).toLocaleString() + "%";}
+                  if (PCPP > valorMasGrande) {valorMasGrande = PCPP;  fuerzaP = "PCPP"; document.getElementById("FP18").src = "./images/PCPP.png"; dom.byId("P18").value = ((PCPP/Tvot18)*100).toLocaleString() + "%"; }
+                  if (PSI > valorMasGrande)  {valorMasGrande = PSI; fuerzaP = "PSI"; document.getElementById("FP18").src = "./images/PSI.png"; dom.byId("P18").value = ((PSI/Tvot18)*100).toLocaleString() + "%"; }
+                  if (MORENA > valorMasGrande){valorMasGrande = MORENA;   fuerzaP = "MORENA"; document.getElementById("FP18").src = "./images/MORENA.png"; dom.byId("P18").value = ((MORENA/Tvot18)*100).toLocaleString()+"%";}
+                  if (ES > valorMasGrande)   {valorMasGrande = ES; fuerzaP = "ENCUENTRO SOCIAL";  }
+                  var VMG = valorMasGrande;//Coalicion ganadora
+                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG18").src = "./images/PAN_PRD_MC_PCPP_PSI.png"; dom.byId("CGP18").value = ((coali1/Tvot18)*100).toLocaleString() + "%";};
+                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG18").src = "./images/PT_MORENA_ES.png"; dom.byId("CGP18").value = ((coali2/Tvot18)*100).toLocaleString() + "%";};
+        }
+
+        function Elecciones19(Results){
+          var Tmun = 0, mun, cont = 0;
+                    var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, MORENA= 0, coali1 = 0, coali2 = 0;
+                    Lnominal = 0, votaron = 0
+                    var dataChart = [];
+                   // var dataChartComplete = [];
+                   // var dataChart18 = []; 
+
+                    if (Results.features.length == 0) {
+                      document.getElementById("Contenedor").style.display= "none";
+                    } else {
+                        arrayUtils.forEach(Results.features, function(feature) {
+          
+                          var lista = feature.attributes["LISTA_NOMINAL"];
+                          Lnominal += lista;
+                          var totalV = feature.attributes["TOTAL_VOTOS"];
+                          votaron += totalV;
+                          mun = feature.attributes["MUNICIPIO"];
+                          if (mun) { cont++; }
+                          var PANCOMPLETO = feature.attributes["PAN_COMPLETO"];
+                          PAN += PANCOMPLETO;
+                          var PRICOMPLETO = feature.attributes["PRI_COMPLETO"];
+                          PRI += PRICOMPLETO;
+                          var PRDCOMPLETO = feature.attributes["PRD_COMPLETO"];
+                          PRD += PRDCOMPLETO;
+                          var PTCOMPLETO = feature.attributes["PT_COMPLETO"];
+                          PT += PTCOMPLETO;
+                          var PVCOMPLETO = feature.attributes["PVEM_COMPLETO"];
+                          PVEM += PVCOMPLETO;
+                          var MCCOMPLETO = feature.attributes["MC_COMPLETO"];
+                          MC += MCCOMPLETO;
+                          var MORCOMPLETO = feature.attributes["MORENA_COMPLETO"];
+                          MORENA += MORCOMPLETO;
+                          //Calculo de coalicion o partido ganador
+                          var coali1Completo = feature.attributes["PAN_PRD_MC_COMPLETO"];
+                          coali1 += coali1Completo;
+                          var coali2Completo = feature.attributes["PT_PVEM_MORENA_COMPLETO"];
+                          coali2 += coali2Completo;
+                           // fuerzaP19.push(feature.attributes["COALICION_O_PARTIDO_GANADOR"]);//Genero el array de ganadores
+                 
+                            /*dom.byId("municipio").value = mun;
+                           /* var p_totalM = feature.attributes["POBMAS"];
+                            var p_totalF = feature.attributes["POBFEM"];
+                            totalPM += p_totalM;
+                            totalPF += p_totalF;*/
+
+                           /* var p_totalM18 = feature.attributes["P_18YMAS_M"];
+                            var p_totalF18 = feature.attributes["P_18YMAS_F"];
+                            totalPM18 += p_totalM18;
+                            totalPF18 += p_totalF18*/
+
+                        });
+                        var Nvotaron = Lnominal - votaron;
+                        
+                       /* dataChart18.push(totalPF18);
+                        dataChart18.push(totalPM18);*/
+                    }
+                  var valorMasGrande = PAN; // Suponemos que el primer número es el más grande inicialmente
+                  var fuerzaP = "PAN"; 
+                  document.getElementById("FP19").src = "./images/PAN.png"; dom.byId("P19").value = ((PAN/votaron)*100).toLocaleString() + "%";
+                  // Comparar cada variable con la actual más grande y actualizar si se encuentra un valor más grande
+                  if (PRI > valorMasGrande)  {valorMasGrande = PRI; fuerzaP = "PRI"; document.getElementById("FP19").src = "./images/PRI.png"; dom.byId("P19").value = ((PRI/votaron)*100).toLocaleString() + "%";document.getElementById("CG19").src = "./images/PRI.png";dom.byId("CGP19").value = ((PRI/votaron)*100).toLocaleString() + "%";}
+                  if (PRD > valorMasGrande)  {valorMasGrande = PRD; fuerzaP = "PRD"; document.getElementById("FP19").src = "./images/PRD.png"; dom.byId("P19").value = ((PRD/votaron)*100).toLocaleString() + "%";}
+                  if (PT > valorMasGrande)   {valorMasGrande = PT; fuerzaP = "PT"; document.getElementById("FP19").src = "./images/PT.png"; dom.byId("P19").value = ((PT/votaron)*100).toLocaleString() + "%";}
+                  if (PVEM > valorMasGrande) {valorMasGrande = PVEM; fuerzaP = "PVEM";document.getElementById("FP19").src = "./images/PVEM.png"; dom.byId("P19").value = ((PVEM/votaron)*100).toLocaleString() + "%";}
+                  if (MC > valorMasGrande){valorMasGrande = MC; fuerzaP = "MC";  }
+                  if (MORENA > valorMasGrande){valorMasGrande = MORENA;   fuerzaP = "MORENA"; document.getElementById("FP19").src = "./images/MORENA.png"; dom.byId("P19").value = ((MORENA/votaron)*100).toLocaleString()+"%";}
+                  //Coalicion o partido ganador
+                   var VMG = valorMasGrande;
+                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG19").src = "./images/PAN_PRD_MC.png"; dom.byId("CGP19").value = ((coali1/votaron)*100).toLocaleString() + "%";};
+                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG19").src = "./images/PT_PVEM_MORENA.png"; dom.byId("CGP19").value = ((coali2/votaron)*100).toLocaleString() + "%";};
+                  //SE INTRODUCEN LOS DATOS  EN LA GRAFICA PIE
+                    porcentaje = (votaron / Lnominal) * 100; Nporcentaje = (Nvotaron / Lnominal) * 100;
+                    var RNominal = (Lnominal / 4584484) * 100;
+                    dataChart.push(porcentaje);
+                    dataChart.push(Nporcentaje);
+                   /* dom.byId("Svoto").value = porcentaje.toLocaleString() + "%";
+                    dom.byId("Nvoto").value = Nporcentaje.toLocaleString() + "%";*/
+                    if(cont == 1){
+                      dom.byId("TmunSel").value = mun;
+                      dom.byId("TmunSel").style = "font-size: 11px";
+                    }else{ 
+                      dom.byId("TmunSel").value = cont.toLocaleString();
+                  }
+                  
+                   //Grafico PASTEL----------------------------------------------------
+                   document.getElementById("votos").style.display = "block"; 
+                    var ctx = document.getElementById("votos").getContext('2d');
+                    const labels = ['% Población Que Sí Participó', '% Población Que No Participó'];
+                    if (myChart1) {
+                    //  myChart.clear();
+                     myChart1.destroy();
+                      }
+                     myChart1 = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                          datasets: [{ 
+                                data: dataChart,                            
+                                backgroundColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 255, 128, 1)',
+                                    'rgba(0, 0, 255, 1)'
+                                ],
+                                borderWidth: 1,
+                                //label: '%'
+                            }],
+                            labels: [dataChart[0].toFixed(2)+" % Población Que Sí Participó", dataChart[1].toFixed(2)+" % Población Que No Participó"],                             
+                        },
+                        options: {   
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          aspectRatio: 1.0,                       
+                            cutoutPercentage: 0,
+                            tooltips: {
+                            callbacks: {
+                              label: function (tooltipItem, data) {
+                                return data.labels[tooltipItem.index] + ": hola " +
+                                  formatter.format(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]);
+                              }
+                            }
+                          },
+                            plugins: {
+                            title: {
+                              display: true,
+                              text: 'Participación Ciudadana',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
+                            }
+                          }
+                        }
+                    });
+            //Codigo Indicador Lista Nominal--------------------------------------------------------------
+                    document.getElementById("indicador").style.display = "block"; 
+             var data = [
+                {
+                  type: "indicator",
+                  mode: "gauge+number",//agregar delta "+delta"
+                  value: RNominal,
+                  number: { suffix: "%" },
+                  title: { text: "<b>Lista Nominal</b>", font: { size: 21 } },
+                  //delta: { reference: 50, increasing: { color: "RebeccaPurple" }},
+                  gauge: {
+                    axis: { range: [null, 100], tickwidth: 2, tickcolor: "darkblue" },
+                    bar: { color: "darkblue" },
+                    bgcolor: "white",
+                    borderwidth: 3,
+                    bordercolor: "gray",
+                  }
+                }
+              ];
+
+              var layout = {
+                width: 200,
+                height: 200,
+                margin: { t: 25, r: 30, l: 20, b: 10 },
+                paper_bgcolor: "#ffffff00",
+                font: { color: "black", family: "Arial" }
+              };
+
+              Plotly.react("indicador", data, layout);
+                    //Fin indicador
+
+                   // dom.byId("txtPtotal5").value = totalP5.toLocaleString();
+                   // dom.byId("txtPtotal614").value = totalP614.toLocaleString();
+                    
+                 /*   dataChartComplete.push(totalP04);
+                    dataChartComplete.push(totalP5);
+                    dataChartComplete.push(totalP614);
+                    dataChartComplete.push(totalP15);
+                    dataChartComplete.push(totalP18);
+                    dataChartComplete.push(totalP1559);
+                    dataChartComplete.push(totalP60);
+                    dataChartComplete.push(totalP65);
+
+                   // Chart.defaults.global.defaultFontColor = 'white';
+                    document.getElementById("cPopTot").style.display = "block";
+                    document.getElementById("cPt18").style.display = "block";
+                    document.getElementById("cPTotalEdades").style.display = "block";
+
+                    var ctxTotxEdad = document.getElementById("cPTotalEdades").getContext('2d');
+                    if (myChart) {
+                    //  myChart.clear();
+                     myChart.destroy();
+                      }
+                     myChart = new Chart(ctxTotxEdad, {
+                        type: 'bar',
+                        data: {
+                            labels: ["0 a 4 años", "Mayor de 5 años", "6 a 14 años", "Mayor de 15 años", "Mayor de 18 años", "15 a 59 años", "Mayor de 60 años", "Mayor de 65 años"],
+                            datasets: [{
+                                label: 'Población Total por Edades',
+                                data: dataChartComplete,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(255, 159, 64, 1)',
+                                    'rgba(231, 88, 230, 1)',
+                                    'rgba(227, 207, 16, 1)',
+                                    'rgba(16, 207, 227, 1)',
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(255, 159, 64, 1)',
+                                    'rgba(231, 88, 230, 1)',
+                                    'rgba(227, 207, 16, 1)',
+                                    'rgba(16, 207, 227, 1)',
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                yAxes: [{
+                                    ticks: {
+                                        beginAtZero: true
+                                    }
+                                }]
+                            },
+                            tooltips: {
+                                callbacks: {
+                                    label: function(tooltipItem, data) {
+                                        return tooltipItem.yLabel.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    //console.log(dataChart);
+                    //
+                    var ctx = document.getElementById("cPopTot").getContext('2d');
+                    if (myChart2) {
+                    //  myChart.clear();
+                     myChart2.destroy();
+                      }
+                     myChart2 = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: ["Mujeres", "Hombres"],
+                            datasets: [{
+                                label: 'Población Total',
+                                data: dataChart,
+                                backgroundColor: [
+                                    'rgba(255, 153, 255, 1)',
+                                    'rgba(0, 153, 51, 1)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 153, 255, 1)',
+                                    'rgba(0, 153, 51, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            cutoutPercentage: 0,
+                            tooltips: {
+                                callbacks: {
+                                    label: function(tooltipItem, data) {
+                                        var allData = data.datasets[tooltipItem.datasetIndex].data;
+                                        return data.labels[tooltipItem.index] + ": " + allData[tooltipItem.index].toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    });*/
+        }
+
+        on(dom.byId("clearGraphics"), "click", function(){
+          if(map){
+            map.graphics.clear();
+            dom.byId("pobTP").value = "---";
+            dom.byId("txtkm").value = "---";
+            dom.byId("TmunSel").value = "---";
+            dom.byId("SP").value = "---";
+            dom.byId("SinSalud").value = "---";
+            dom.byId("SitPob").value = "---";
+            document.getElementById("Contenedor").style.display= "none";
+           // document.getElementById("cPt18").style.display = "none";
+           // document.getElementById("cPTotalEdades").style.display = "none";
+           if (myChart1) {
+                    //  myChart.clear();
+                     myChart1.destroy();
+                      }
+          }
+        });
+       
+  });
+</script>
+
+</head>
+
+<body class="claro">
+ <div class="capas" id="capas">
+  <input type="checkbox" id="capa" name="capa1"><label for="capa1">Elecciones Puebla Gubernatura 2016</label><br> 
+  <input type="checkbox" id="capa2" name="capa2"><label for="capa2">Elecciones Puebla Gubernatura 2018</label><br>
+  <input type="checkbox" id="capa3" name="capa3" checked><label for="capa2">Elecciones Puebla Gubernatura 2019</label> 
+  
+</div>
+<!----------------SIMBOLOGIAS--------------------->
+<div class="simbologia" id="Simb16">
+  <table>
+    <caption><strong>Simbología</strong></caption>
+    <tbody>
+      <tr title="Partido Revolucionario Institucional">
+        <td><span style="height: 35px;width: 35px; background-color: #08943c;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PRI.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Acción Nacional">
+        <td><span style="height: 35px;width: 35px; background-color: #1c92da;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PAN.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido De La Revolución Democrática">
+        <td><span style="height: 35px;width: 35px; background-color: #e6e600;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PRD.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Nueva Alianza">
+        <td><span style="height: 35px;width: 35px; background-color: #97dbf2;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PANAL.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Del Trabajo">
+        <td><span style="height: 35px;width: 35px; background-color: #e64c00;border-radius: 50%; display: inline-block;"></span></td> 
+        <td><img src="./images/PT.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Pacto Social De Integración">
+        <td><span style="height: 35px;width: 35px; background-color: #f57a7a;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PSI.png" width="55px" height="40px"></td>
+      </tr>
+       <tr>
+        <td colspan="2" style="text-align: center;"><b>Transparencia</b></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="background-color: #ffffff42;"><input type="range" id="transp16" min="0" max="10" value="9" title="9"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="simbologia" id="Simb18">
+  <table>
+    <caption><strong>Simbología</strong></caption>
+    <tbody> 
+      <tr title="Partido Revolucionario Institucional">
+        <td><span style="height: 35px;width: 35px; background-color: #08943c;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PRI.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Acción Nacional">
+        <td><span style="height: 35px;width: 35px; background-color: #1c92da;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PAN.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Movimiento Regeneración Nacional">
+        <td><span style="height: 35px;width: 35px; background-color: #b8241c;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/MORENA.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Movimiento Ciudadano">
+        <td><span style="height: 35px;width: 35px; background-color: #ffaa00;border-radius: 50%; display: inline-block;"></span></td> 
+        <td><img src="./images/MC.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido De La Revolución Democrática">
+        <td><span style="height: 35px;width: 35px; background-color: #e6e600;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PRD.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Pacto Social De Integración">
+        <td><span style="height: 35px;width: 35px; background-color: #f57a7a;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PSI.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Verde Ecologista De México">
+        <td><span style="height: 35px;width: 35px; background-color: #98e600;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PVEM.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Compromiso Por Puebla">
+        <td ><span style="height: 35px;width: 35px; background-color: #004da8;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PCPP.png" width="55px" height="40px"></td>
+      </tr>
+       <tr>
+        <td colspan="2" style="text-align: center;"><b>Transparencia</b></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="background-color: #ffffff42;"><input type="range" id="transp18" min="0" max="10" value="9" title="9"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="simbologia" id="Simb19" style="display: block;">
+  <table>
+    <caption><strong>Simbología</strong></caption> 
+    <tbody>
+      <tr title="Partido Revolucionario Institucional">
+        <td><span style="height: 35px;width: 35px; background-color: #08943c;border-radius: 50%; display: inline-block;"></span></td> 
+        <td ><img src="./images/PRI.png" width="55px" height="40px"></td>    
+      </tr> 
+      <tr title="Partido Acción Nacional">
+        <td><span style="height: 35px;width: 35px; background-color: #1c92da;;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PAN.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Movimiento Regeneración Nacional">
+        <td><span style="height: 35px;width: 35px; background-color: #b8241c;border-radius: 50%; display: inline-block;"></span></td> 
+        <td><img src="./images/MORENA.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Del Trabajo">
+        <td><span style="height: 35px;width: 35px; background-color: #e64c00;border-radius: 50%; display: inline-block;"></span></td> 
+        <td><img src="./images/PT.png" width="55px" height="40px"></td>
+      </tr>
+      <tr title="Partido Verde Ecologista De México">
+        <td><span style="height: 35px;width: 35px; background-color: #98e600;border-radius: 50%; display: inline-block;"></span></td>
+        <td><img src="./images/PVEM.png" width="55px" height="40px"></td> 
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center;"><b>Transparencia</b></td>
+      </tr>
+      <tr>
+        <td colspan="2"  style="background-color: #ffffff42;"><input type="range" id="transp19" min="0" max="10" value="9" title="9"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<!----------------FIN SIMBOLOGIAS--------------------->
+<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters:'true', design:'headline'" style="width:100%;height:100%;">
+
+  <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">
+    <div style="position:absolute; left:20px; top:100px; z-Index:2;">
+      <div data-dojo-type="dijit/TitlePane" data-dojo-props="title:'Mapas Base', open:false">
+        <div data-dojo-type="dijit/layout/ContentPane" style="width:380px; height:280px; overflow:auto;">
+          <div id="basemapGallery"></div>
+        </div>
+      </div>
+    </div>
+    <div id="search"></div>
+  </div>
+
+  <div id="leftPane" data-dojo-type="dijit/layout/ContentPane"  data-dojo-props="region:'left'">
+    <div class="details" ><br>
+      <table style="border-bottom: 3px solid;">
+        <caption style="font-size: 15px;"><strong>Elige una opción para dibujar</strong></caption>
+        <tbody>
+          <tr>
+               <td style="width: 90px;"><input type="image" src="./images/polygon.png" class="tool" id="polygon" title="Dibujar Polígono"></td>
+               <td style="width: 90px;"><input type="image" src="./images/dibujo.png" class="tool" id="freehandpolygon" width="60px" height="60px" title="Dibujar polígono a mano alzada"></td>
+               <td><input type="image" src="./images/goma.png" id="clearGraphics" height="58px" title="Borrar Dibujo"></td>
+          </tr>
+       </tbody>
+     </table>
+    </div> 
+    <table style="margin: 0 auto;">
+      <tbody>   
+        <tr><td colspan="2" style="text-align: center; font-size: 20px;"><strong >Características Socioeconómicas 2020</strong></td></tr>
+        <tr><td colspan="2" style="text-align: center; font-size: 10px;"><strong>Fuente: INEGI</strong></td></tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><b style="font-size: 60px; color: #d1c1ae;">&#x1f3db;</b></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><b>Municipio(s) Seleccionado(s)</b></td>
+        </tr> 
+        <tr>        
+          <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="TmunSel" value="---"  size="25" readonly/></td>
+        </tr>
+        <tr>
+             <td colspan="2" style="text-align: center;"><b style="font-size: 60px;" >&#x33A2;</b></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><b >Área Seleccionada</b></label></td> 
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="txtkm" value="---"  size="6" readonly/></td>
+        </tr>
+       <tr>
+            <td colspan="2" style="text-align: center;"><b style="font-size: 60px;">&#x1f46a;&#xfe0e;</b></td>
+       </tr>
+       <tr>
+        <td colspan="2" style="text-align: center;"><b>Población Total</b></td>
+       </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="pobTP" value="---"  size="6" readonly/> </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;"><img src="./images/Salario.png" ></td>
+     </tr>
+     <tr>
+      <td colspan="2" style="text-align: center;"><b>Salario Promedio Por Vivienda</b></td>
+     </tr>
+      <tr>
+        <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="SP" value="---"  size="8" readonly/> </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center;"><img src="./images/SinSalud.png" ></td>
+   </tr>
+   <tr>
+    <td colspan="2" style="text-align: center;"><b>Población Sin Servicios De Salud</b></td>
+   </tr>
+    <tr>
+      <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="SinSalud" value="---"  size="8" readonly/> </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="text-align: center;"><img src="./images/Poor.png" ></td>
+ </tr>
+ <tr>
+  <td colspan="2" style="text-align: center;"><b>Población En Situación De Pobreza</b></td>
+ </tr>
+  <tr>
+    <td colspan="2" style="text-align: center;"><input type="text" class="TextBlanco" id="SitPob" value="---"  size="8" readonly/> </td>
+  </tr>
+      </tbody>
+    </table>
+    <br><br>
+  </div>
+
+  <!--------ACA VA LO POLITICO------->
+  <div id="Contenedor" style="display: none;">
+   <div id="Zonapolitica" >
+    <div id="indicador" style=" border-radius: 10px; padding: 10px; margin-right: 30px; background-color: #ffffffa6;" title="Porcentaje Del Área Seleccionada Respecto A La Lista Nominal Total"></div>
+    <div class="chart-container"><canvas id="votos" width="10" height="10"></canvas></div>
+    <table id="TablaFP" style=" border-radius: 10px; padding: 10px; margin-right: 30px; background-color: #ffffffa6;border-top-left-radius: 0px 0px;border-top-right-radius: 0px 0px;">
+      <caption style="border-radius: 10px; padding: 10px; background-color: #ffffffa6; font-size: 18px;border-bottom-left-radius: 0px 0px;border-bottom-right-radius: 0px 0px;"><strong>Actor Político con Más Fuerza</strong></caption><br>
+      <tbody>
+        <tr style="text-align: center; font-size: 18px;">
+          <td>2016</td>
+          <td>2018</td>
+          <td>2019</td>
+        </tr>
+        <tr>
+          <td id="Fila16"><input type="image" id="FP16" width="85px" height="85px"/></td>
+          <td id="Fila18"><input type="image" id="FP18" width="85px" height="85px"/></td>
+          <td id="Fila19"><input type="image" id="FP19" width="85px" height="85px"/></td>
+        </tr>
+        <tr>
+          <td><input type="text" id="P16" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+          <td><input type="text" id="P18" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+          <td><input type="text" id="P19" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table id="TablaCG" style=" border-radius: 10px; padding: 10px; background-color: #ffffffa6;border-top-left-radius: 0px 0px;border-top-right-radius: 0px 0px;">
+      <caption style="border-radius: 10px; padding: 10px; background-color: #ffffffa6; font-size: 18px;border-bottom-left-radius: 0px 0px;border-bottom-right-radius: 0px 0px;"><strong>Candidatura Ganadora</strong></caption><br>
+      <tbody>
+        <tr style="text-align: center; font-size: 18px;">
+          <td>2016</td>
+          <td>2018</td>
+          <td>2019</td>
+        </tr>
+        <tr>
+          <td id=""><input type="image" id="CG16" width="85px" height="85px"/></td>
+          <td id=""><input type="image" id="CG18" width="85px" height="85px"/></td>
+          <td id=""><input type="image" id="CG19" width="85px" height="85px"/></td>
+        </tr>
+        <tr>
+          <td><input type="text" id="CGP16" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+          <td><input type="text" id="CGP18" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+          <td><input type="text" id="CGP19" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
+        </tr>
+       
+      </tbody>
+    </table>
+   </div></div>
+   
+</div>
+</body>
+</html>
+ 
