@@ -104,6 +104,27 @@
   width: 250px;
   border-radius: 10px; margin-right: 30px; background-color: #ffffffa6;
 }
+
+#ZonaGbarras{
+    display: none;
+    /*position: fixed; transform: translate(1200px, 490px);*/
+    position: absolute; right: -2%; bottom: 93%;
+    z-index: 1;
+    background-color: #ffffff00;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#000000;
+    border-radius: 10px; 
+    padding: 10px;
+}
+
+.chart-containerBar {
+  position: relative;
+  margin: auto;
+  height: 220px;
+  width: 317px;
+  border-radius: 10px; margin-right: 30px; background-color: #ffffffa6;
+}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -118,7 +139,7 @@
 </script>
 <script>
 var map, tb, Lnominal = 0, votaron = 0,  Lnominal16 = 0, Tvot16 = 0, Lnominal18 = 0, Tvot18 = 0;
-let myChart, myChart1, myChart2;
+let myChart, myChart1, myChart2, ChartBar, ChartBar18, ChartBar16;
 
 require(["dojo/dom",
         "dojo/_base/array",
@@ -692,6 +713,7 @@ require(["dojo/dom",
         function Elecciones16(queryResults){
           var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, PANAL= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, INP= 0, coali1 = 0, coali2 = 0;
                   Lnominal16 = 0; Tvot16 = 0;
+                  var ChartPartidos16 = [], NombrePartido16 = [], BackColor16 = [], BorderColor16 = [];
                     if (queryResults.features.length == 0) {
                       document.getElementById("Contenedor").style.display= "none";
                     } else {
@@ -763,14 +785,53 @@ require(["dojo/dom",
                   if (INP > valorMasGrande)  {valorMasGrande = INP;  fuerzaP = "INP"; } 
                   //Se define cual es la candidatura o coalision ganadora
                   var VMG = valorMasGrande;
-                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG16").src = "./images/PAN_PT_PANAL_PCPP_PSI.png"; dom.byId("CGP16").value = ((coali1/Tvot16)*100).toLocaleString() + "%";};
-                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG16").src = "./images/PRI_PVEM_ES.png"; dom.byId("CGP16").value = ((coali2/Tvot16)*100).toLocaleString() + "%";};
-                 
+                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG16").src = "./images/PAN_PT_PANAL_PCPP_PSI.png"; dom.byId("CGP16").value = ((coali1/Tvot16)*100).toLocaleString() + "%";
+                  ChartPartidos16[0] = PAN;  ChartPartidos16[1] = PT;  ChartPartidos16[2] = PANAL;  ChartPartidos16[3]=PCPP;  ChartPartidos16[4] = PSI;
+                  NombrePartido16[0] = "PAN";  NombrePartido16[1] = "PT";  NombrePartido16[2] = "PANAL";  NombrePartido16[3] = "PCPP";  NombrePartido16[4] = "PSI";
+                  BackColor16[0] = 'rgba(255, 99, 132, 1)';  BackColor16[1] = 'rgba(255, 99, 132, 1)';  BackColor16[2] = 'rgba(255, 99, 132, 1)';  BackColor16[3] = 'rgba(255, 99, 132, 1)';  BackColor16[4] = 'rgba(255, 99, 132, 1)'; 
+                  BorderColor16[0] = 'rgba(255, 99, 132, 1)'; BorderColor16[1] = 'rgba(255, 99, 132, 1)'; BorderColor16[2] = 'rgba(255, 99, 132, 1)'; BorderColor16[3] = 'rgba(255, 99, 132, 1)'; BorderColor16[4] = 'rgba(255, 99, 132, 1)';
+                }
+                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG16").src = "./images/PRI_PVEM_ES.png"; dom.byId("CGP16").value = ((coali2/Tvot16)*100).toLocaleString() + "%";
+                  NombrePartido16.splice(2, 2); ChartPartidos16.splice(2, 2);  BackColor16.splice(2, 2); BorderColor16.splice(2, 2); 
+                  ChartPartidos16[0] = PRI;  ChartPartidos16[1] = PVEM;  ChartPartidos16[2] = ES;
+                  NombrePartido16[0] = "PRI"; NombrePartido16[1] = "PVEM";  NombrePartido16[2] = "ES";
+                  BackColor16[0] = 'rgba(255, 99, 132, 1)';  BackColor16[1] = 'rgba(54, 162, 235, 1)';  BackColor16[2] = 'rgba(255, 206, 86, 1)';
+                  BorderColor16[0] = 'rgba(255, 99, 132, 1)'; BorderColor16[1] = 'rgba(54, 162, 235, 1)'; BorderColor16[2] = 'rgba(255, 206, 86, 1)';
+                }
+                //GRAFICA DE BARRAS 2016
+                var Gbarras16 = document.getElementById("chartbar16").getContext('2d');
+                    if (ChartBar16) {
+                    //  myChart.clear();    
+                    ChartBar16.destroy();
+                      }
+                      ChartBar16 = new Chart(Gbarras16, {
+                        type: 'bar',
+                        data: {
+                            labels: NombrePartido16,
+                            datasets: [{
+                                label: 'Desgloce de votos',
+                                data: ChartPartidos16,
+                                backgroundColor: BackColor16,
+                                borderColor: BorderColor16,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            tooltips: {
+                                callbacks: {
+                                    label: function(tooltipItem, data) {
+                                        return tooltipItem.yLabel.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }); 
         }
 
         function Elecciones18(queryResults){
           var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, TOTv = 0,coali1 = 0, coali2 = 0;
                   Lnominal18 = 0, Tvot18 = 0
+          var ChartPartidos1 = [], NombrePartido18 = [], BackColor = [], BorderColor = [];
                   if (queryResults.features.length == 0) {
                     document.getElementById("Contenedor").style.display= "none";
                     } else {
@@ -821,16 +882,57 @@ require(["dojo/dom",
                   if (MORENA > valorMasGrande){valorMasGrande = MORENA;   fuerzaP = "MORENA"; document.getElementById("FP18").src = "./images/MORENA.png"; dom.byId("P18").value = ((MORENA/Tvot18)*100).toLocaleString()+"%";}
                   if (ES > valorMasGrande)   {valorMasGrande = ES; fuerzaP = "ENCUENTRO SOCIAL";  }
                   var VMG = valorMasGrande;//Coalicion ganadora
-                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG18").src = "./images/PAN_PRD_MC_PCPP_PSI.png"; dom.byId("CGP18").value = ((coali1/Tvot18)*100).toLocaleString() + "%";};
-                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG18").src = "./images/PT_MORENA_ES.png"; dom.byId("CGP18").value = ((coali2/Tvot18)*100).toLocaleString() + "%";};
+                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG18").src = "./images/PAN_PRD_MC_PCPP_PSI.png"; dom.byId("CGP18").value = ((coali1/Tvot18)*100).toLocaleString() + "%";
+                  ChartPartidos1[0] = PAN;  ChartPartidos1[1] = PRD;  ChartPartidos1[2] = MC;  ChartPartidos1[3]=PCPP;  ChartPartidos1[4] = PSI;
+                  NombrePartido18[0] = "PAN";  NombrePartido18[1] = "PRD";  NombrePartido18[2] = "MC";  NombrePartido18[3] = "PCPP";  NombrePartido18[4] = "PSI";
+                  BackColor[0] = 'rgba(255, 99, 132, 1)';  BackColor[1] = 'rgba(255, 99, 132, 1)';  BackColor[2] = 'rgba(255, 99, 132, 1)';  BackColor[3] = 'rgba(255, 99, 132, 1)';  BackColor[4] = 'rgba(255, 99, 132, 1)'; 
+                  BorderColor[0] = 'rgba(255, 99, 132, 1)'; BorderColor[1] = 'rgba(255, 99, 132, 1)'; BorderColor[2] = 'rgba(255, 99, 132, 1)'; BorderColor[3] = 'rgba(255, 99, 132, 1)'; BorderColor[4] = 'rgba(255, 99, 132, 1)';
+                }
+                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG18").src = "./images/PT_MORENA_ES.png"; dom.byId("CGP18").value = ((coali2/Tvot18)*100).toLocaleString() + "%";
+                  NombrePartido18.splice(2, 2); ChartPartidos1.splice(2, 2);  BackColor.splice(2, 2); BorderColor.splice(2, 2); 
+                  ChartPartidos1[0] = PT;  ChartPartidos1[1] = MORENA;  ChartPartidos1[2] = ES;
+                  NombrePartido18[0] = "PT"; NombrePartido18[1] = "MORENA";  NombrePartido18[2] = "ES";
+                  BackColor[0] = 'rgba(255, 99, 132, 1)';  BackColor[1] = 'rgba(54, 162, 235, 1)';  BackColor[2] = 'rgba(255, 206, 86, 1)';
+                  BorderColor[0] = 'rgba(255, 99, 132, 1)'; BorderColor[1] = 'rgba(54, 162, 235, 1)'; BorderColor[2] = 'rgba(255, 206, 86, 1)';
+                }
+
+                  //GRAFICA DE BARRAS 2018
+                  var Gbarras18 = document.getElementById("chartbar18").getContext('2d');
+                    if (ChartBar18) {
+                    //  myChart.clear();    
+                    ChartBar18.destroy();
+                      }
+                      ChartBar18 = new Chart(Gbarras18, {
+                        type: 'bar',
+                        data: {
+                            labels: NombrePartido18,
+                            datasets: [{
+                                label: 'Desgloce de votos',
+                                data: ChartPartidos1,
+                                backgroundColor: BackColor,
+                                borderColor: BorderColor,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            tooltips: {
+                                callbacks: {
+                                    label: function(tooltipItem, data) {
+                                        return tooltipItem.yLabel.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    });
+
         }
 
         function Elecciones19(Results){
-          var Tmun = 0, mun, cont = 0;
+                    var Tmun = 0, mun, cont = 0;
                     var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, MORENA= 0, coali1 = 0, coali2 = 0;
                     Lnominal = 0, votaron = 0
                     var dataChart = [];
-                   // var dataChartComplete = [];
+                    var ChartPartidos = [], NombrePartido = [];
                    // var dataChart18 = []; 
 
                     if (Results.features.length == 0) {
@@ -886,7 +988,12 @@ require(["dojo/dom",
                   var fuerzaP = "PAN"; 
                   document.getElementById("FP19").src = "./images/PAN.png"; dom.byId("P19").value = ((PAN/votaron)*100).toLocaleString() + "%";
                   // Comparar cada variable con la actual más grande y actualizar si se encuentra un valor más grande
-                  if (PRI > valorMasGrande)  {valorMasGrande = PRI; fuerzaP = "PRI"; document.getElementById("FP19").src = "./images/PRI.png"; dom.byId("P19").value = ((PRI/votaron)*100).toLocaleString() + "%";document.getElementById("CG19").src = "./images/PRI.png";dom.byId("CGP19").value = ((PRI/votaron)*100).toLocaleString() + "%";}
+                  if (PRI > valorMasGrande)  {
+                    valorMasGrande = PRI; 
+                    fuerzaP = "PRI"; document.getElementById("FP19").src = "./images/PRI.png"; 
+                    dom.byId("P19").value = ((PRI/votaron)*100).toLocaleString() + "%";document.getElementById("CG19").src = "./images/PRI.png";
+                    dom.byId("CGP19").value = ((PRI/votaron)*100).toLocaleString() + "%";
+                  }
                   if (PRD > valorMasGrande)  {valorMasGrande = PRD; fuerzaP = "PRD"; document.getElementById("FP19").src = "./images/PRD.png"; dom.byId("P19").value = ((PRD/votaron)*100).toLocaleString() + "%";}
                   if (PT > valorMasGrande)   {valorMasGrande = PT; fuerzaP = "PT"; document.getElementById("FP19").src = "./images/PT.png"; dom.byId("P19").value = ((PT/votaron)*100).toLocaleString() + "%";}
                   if (PVEM > valorMasGrande) {valorMasGrande = PVEM; fuerzaP = "PVEM";document.getElementById("FP19").src = "./images/PVEM.png"; dom.byId("P19").value = ((PVEM/votaron)*100).toLocaleString() + "%";}
@@ -894,8 +1001,22 @@ require(["dojo/dom",
                   if (MORENA > valorMasGrande){valorMasGrande = MORENA;   fuerzaP = "MORENA"; document.getElementById("FP19").src = "./images/MORENA.png"; dom.byId("P19").value = ((MORENA/votaron)*100).toLocaleString()+"%";}
                   //Coalicion o partido ganador
                    var VMG = valorMasGrande;
-                  if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG19").src = "./images/PAN_PRD_MC.png"; dom.byId("CGP19").value = ((coali1/votaron)*100).toLocaleString() + "%";};
-                  if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG19").src = "./images/PT_PVEM_MORENA.png"; dom.byId("CGP19").value = ((coali2/votaron)*100).toLocaleString() + "%";};
+                  if (coali1 > VMG)  {
+                    VMG = coali1; document.getElementById("CG19").src = "./images/PAN_PRD_MC.png"; 
+                    dom.byId("CGP19").value = ((coali1/votaron)*100).toLocaleString() + "%";
+                    ChartPartidos.push(PAN); console.log(PAN + " 2019");
+                    ChartPartidos.push(PRD);
+                    ChartPartidos.push(MC);
+                    NombrePartido.push("PAN");NombrePartido.push("PRD");NombrePartido.push("MC");
+                  }
+                  if (coali2 > VMG)  {
+                    VMG = coali2; document.getElementById("CG19").src = "./images/PT_PVEM_MORENA.png"; 
+                    dom.byId("CGP19").value = ((coali2/votaron)*100).toLocaleString() + "%";
+                    ChartPartidos.push(PT);
+                    ChartPartidos.push(PVEM);
+                    ChartPartidos.push(MORENA);  console.log(MORENA + " 2019");
+                    NombrePartido.push("PT");NombrePartido.push("PV");NombrePartido.push("MORENA");
+                  }
                   //SE INTRODUCEN LOS DATOS  EN LA GRAFICA PIE
                     porcentaje = (votaron / Lnominal) * 100; Nporcentaje = (Nvotaron / Lnominal) * 100;
                     var RNominal = (Lnominal / 4584484) * 100;
@@ -991,68 +1112,32 @@ require(["dojo/dom",
               Plotly.react("indicador", data, layout);
                     //Fin indicador
 
-                   // dom.byId("txtPtotal5").value = totalP5.toLocaleString();
-                   // dom.byId("txtPtotal614").value = totalP614.toLocaleString();
-                    
-                 /*   dataChartComplete.push(totalP04);
-                    dataChartComplete.push(totalP5);
-                    dataChartComplete.push(totalP614);
-                    dataChartComplete.push(totalP15);
-                    dataChartComplete.push(totalP18);
-                    dataChartComplete.push(totalP1559);
-                    dataChartComplete.push(totalP60);
-                    dataChartComplete.push(totalP65);
-
-                   // Chart.defaults.global.defaultFontColor = 'white';
-                    document.getElementById("cPopTot").style.display = "block";
-                    document.getElementById("cPt18").style.display = "block";
-                    document.getElementById("cPTotalEdades").style.display = "block";
-
-                    var ctxTotxEdad = document.getElementById("cPTotalEdades").getContext('2d');
-                    if (myChart) {
-                    //  myChart.clear();
-                     myChart.destroy();
+                    var Gbarras = document.getElementById("chartbar").getContext('2d');
+                    if (ChartBar) {
+                    //  myChart.clear();    
+                    ChartBar.destroy();
                       }
-                     myChart = new Chart(ctxTotxEdad, {
+                      ChartBar = new Chart(Gbarras, {
                         type: 'bar',
                         data: {
-                            labels: ["0 a 4 años", "Mayor de 5 años", "6 a 14 años", "Mayor de 15 años", "Mayor de 18 años", "15 a 59 años", "Mayor de 60 años", "Mayor de 65 años"],
+                            labels: [NombrePartido[0],NombrePartido[1],NombrePartido[2]],
                             datasets: [{
-                                label: 'Población Total por Edades',
-                                data: dataChartComplete,
+                                label: 'Desgloce de votos',
+                                data: ChartPartidos,
                                 backgroundColor: [
                                     'rgba(255, 99, 132, 1)',
                                     'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(75, 192, 192, 1)',
-                                    'rgba(153, 102, 255, 1)',
-                                    'rgba(255, 159, 64, 1)',
-                                    'rgba(231, 88, 230, 1)',
-                                    'rgba(227, 207, 16, 1)',
-                                    'rgba(16, 207, 227, 1)',
+                                    'rgba(255, 206, 86, 1)'
                                 ],
                                 borderColor: [
                                     'rgba(255, 99, 132, 1)',
                                     'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(75, 192, 192, 1)',
-                                    'rgba(153, 102, 255, 1)',
-                                    'rgba(255, 159, 64, 1)',
-                                    'rgba(231, 88, 230, 1)',
-                                    'rgba(227, 207, 16, 1)',
-                                    'rgba(16, 207, 227, 1)',
+                                    'rgba(255, 206, 86, 1)'
                                 ],
                                 borderWidth: 1
                             }]
                         },
                         options: {
-                            scales: {
-                                yAxes: [{
-                                    ticks: {
-                                        beginAtZero: true
-                                    }
-                                }]
-                            },
                             tooltips: {
                                 callbacks: {
                                     label: function(tooltipItem, data) {
@@ -1062,44 +1147,6 @@ require(["dojo/dom",
                             }
                         }
                     });
-                    
-                    //console.log(dataChart);
-                    //
-                    var ctx = document.getElementById("cPopTot").getContext('2d');
-                    if (myChart2) {
-                    //  myChart.clear();
-                     myChart2.destroy();
-                      }
-                     myChart2 = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: ["Mujeres", "Hombres"],
-                            datasets: [{
-                                label: 'Población Total',
-                                data: dataChart,
-                                backgroundColor: [
-                                    'rgba(255, 153, 255, 1)',
-                                    'rgba(0, 153, 51, 1)'
-                                ],
-                                borderColor: [
-                                    'rgba(255, 153, 255, 1)',
-                                    'rgba(0, 153, 51, 1)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            cutoutPercentage: 0,
-                            tooltips: {
-                                callbacks: {
-                                    label: function(tooltipItem, data) {
-                                        var allData = data.datasets[tooltipItem.datasetIndex].data;
-                                        return data.labels[tooltipItem.index] + ": " + allData[tooltipItem.index].toLocaleString();
-                                    }
-                                }
-                            }
-                        }
-                    });*/
         }
 
         on(dom.byId("clearGraphics"), "click", function(){
@@ -1119,6 +1166,31 @@ require(["dojo/dom",
                      myChart1.destroy();
                       }
           }
+        });
+        on(dom.byId("CG19"), "mouseover", function(){
+                dom.byId("ZonaGbarras").style.display = "block"
+                dom.byId("chartbar").style.display = "block"
+
+        });
+        on(dom.byId("CG19"), "mouseout", function(){
+                dom.byId("ZonaGbarras").style.display = "none"
+                dom.byId("chartbar").style.display = "none"
+        });
+        on(dom.byId("CG18"), "mouseover", function(){
+                dom.byId("ZonaGbarras").style.display = "block"
+                dom.byId("chartbar18").style.display = "block"
+        });
+        on(dom.byId("CG18"), "mouseout", function(){
+                dom.byId("ZonaGbarras").style.display = "none"
+                dom.byId("chartbar18").style.display = "none"
+        });
+        on(dom.byId("CG16"), "mouseover", function(){
+                dom.byId("ZonaGbarras").style.display = "block"
+                dom.byId("chartbar16").style.display = "block"
+        });
+        on(dom.byId("CG16"), "mouseout", function(){
+                dom.byId("ZonaGbarras").style.display = "none"
+                dom.byId("chartbar16").style.display = "none"
         });
        
   });
@@ -1376,8 +1448,9 @@ require(["dojo/dom",
         <tr>
           <td id=""><input type="image" id="CG16" width="85px" height="85px"/></td>
           <td id=""><input type="image" id="CG18" width="85px" height="85px"/></td>
-          <td id=""><input type="image" id="CG19" width="85px" height="85px"/></td>
+          <td><input type="image" id="CG19" width="85px" height="85px"/></td>
         </tr>
+        
         <tr>
           <td><input type="text" id="CGP16" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
           <td><input type="text" id="CGP18" value="--" size="6" readonly style="background-color: #ffffff00;border: none;text-align: center; font-size: 18px;"/></td>
@@ -1386,8 +1459,15 @@ require(["dojo/dom",
        
       </tbody>
     </table>
+   <div id="ZonaGbarras">   
+      <div class="chart-containerBar" >
+        <canvas id="chartbar" width="14" height="10" style="display: none;"></canvas>
+        <canvas id="chartbar18" width="14" height="10" style="display: none;"></canvas>
+        <canvas id="chartbar16" width="14" height="10" style="display: none;"></canvas>
+      </div>    
+  </div>
    </div></div>
-   
+  
 </div>
 </body>
 </html>
