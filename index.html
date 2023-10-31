@@ -246,11 +246,11 @@ require(["dojo/dom",
       }, "search");
       var sources = search.get("sources");
       sources.push({
-        featureLayer: new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json"),
+        featureLayer: new FeatureLayer("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/SOCIAL_ECONOMICO_DEMOGRAFICO/MapServer/3?f=json"),
         searchFields: ["NOMGEO"],
         displayField: "NOMGEO",
         exactMatch: false,
-        outFields: ["NOMGEO"],
+        outFields: ["*"],
         name: "Municipios de Puebla",
         placeholder: "Buscar Municipio",
         maxResults: 10,
@@ -258,7 +258,7 @@ require(["dojo/dom",
         enableSuggestions: true,
         minCharacters: 1,
         highlightSymbol: simbolo,
-        infoTemplate: new InfoTemplate("${NOMGEO}", "<b>INFORMACION EN FORMATO DE TEXTO</b>")
+        infoTemplate: new InfoTemplate("${NOMGEO}", "${PDER_SS}")
       });
       search.set("sources", sources);
       search.startup();
@@ -677,7 +677,49 @@ require(["dojo/dom",
                   query2018.execute(queryPobTot, Elecciones18);
                 var query2016 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/ELECCIONES_PUEBLA/MapServer/1?f=json");
                   query2016.execute(queryPobTot, Elecciones16);
+              var querySalud = new Query(); //SE DECLARAN LAS OPCIONES DE CONSULTA
+                querySalud.outFields = ["*"];
+                queryPobTot.where = "CVE_ENT = 21";
+                querySalud.geometry = features[0];
+                querySalud.outSpatialReference = this.map.spatialReference;
+                querySalud.returnGeometry = true;
+             var querySalud2020 = new QueryTask("https://maps.sigsa.info/arcgis/rest/services/ATLAS_MEXICO/SOCIAL_ECONOMICO_DEMOGRAFICO/MapServer/3?f=json");
+             querySalud2020.execute(querySalud, function(queryResults){
+              if (queryResults.features.length == 0) {
+                      document.getElementById("Contenedor").style.display= "none";
+                    } else {
+                      arrayUtils.forEach(queryResults.features, function(feature) {
+                        var  infoTemplate = new esri.InfoTemplate();
+                             infoTemplate.setTitle(feature.attributes["NOMGEO"]);
+                             infoTemplate.setContent("<b>Población Con Servicios De Salud</b><br>" +
+                                                     "<b>IMSS: &nbsp&nbsp&nbsp&nbsp&nbsp</b>" + feature.attributes["PDER_IMSS"] + "<br>" +
+                                                     "<b>ISSSTE: &nbsp&nbsp</b>" + feature.attributes["PDER_ISTE"] + "<br>" +
+                                                     "<b>ISSSTEE: </b>" + feature.attributes["PDER_ISTEE"] + "<br>" +
+                                                     "<b>SEGP: &nbsp&nbsp&nbsp&nbsp</b>" + feature.attributes["PDER_SEGP"] + "<br>" +
+                                                     "<b>IMSSB: &nbsp&nbsp</b>" + feature.attributes["PDER_IMSSB"] + "<br>" +
+                                                     "<b>PMX_DOM: </b>" + feature.attributes["PAFIL_PDOM"] + "<br>" +
+                                                     "<b>IPRIV: &nbsp&nbsp&nbsp</b>" + feature.attributes["PAFIL_IPRIV"] + "<br>" +
+                                                     "<b>OTRA: &nbsp&nbsp&nbsp&nbsp</b>" + feature.attributes["PAFIL_OTRAI"] 
+                             );
+
+                          var geometria = feature.geometry;
+                          var graphic = new Graphic(geometria, new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,255,255]), 2), new dojo.Color([255,255,255,0.05])));
+                          graphic.setInfoTemplate(infoTemplate);
+                          map.graphics.add(graphic);
+                      });
+                      dojo.connect(map.graphics, "onMouseMove", function (evt) {
+                            var g = evt.graphic;
+                            map.infoWindow.setContent(g.getContent());
+                            map.infoWindow.setTitle(g.getTitle());
+                            map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
+                          });
+                          dojo.connect(map.graphics, "onMouseOut", function () { map.infoWindow.hide(); });
+                    }
+
+             });
+
                 map.graphics.clear();
+              
             });
         }
         function Poblacion(queryResults){
@@ -722,11 +764,7 @@ require(["dojo/dom",
                         arrayUtils.forEach(queryResults.features, function(feature) {
                           //fuerzaP16.push(feature.attributes["COALICION_O_PARTIDO_GANADOR"]);
                           //Calculo de partido politico con mas votos
-                          var  infoTemplate = new esri.InfoTemplate(feature.attributes["MUNICIPIO"], "iNFORMACION EN FORMATO DE TEXTO" );
-                          var geometria = feature.geometry;
-                          var graphic = new Graphic(geometria, new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,255,255]), 2), new dojo.Color([255,255,255,0.05])));
-                          graphic.setInfoTemplate(infoTemplate);
-                          map.graphics.add(graphic);
+                         
                           
                           var lista = feature.attributes["LISTA_NOMINAL"];
                           Lnominal16 += lista;
@@ -761,13 +799,7 @@ require(["dojo/dom",
                           coali2 += coali2Completo;
 
                         });
-                        dojo.connect(map.graphics, "onMouseMove", function (evt) {
-                            var g = evt.graphic;
-                            map.infoWindow.setContent(g.getContent());
-                            map.infoWindow.setTitle(g.getTitle());
-                            map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
-                          });
-                          dojo.connect(map.graphics, "onMouseOut", function () { map.infoWindow.hide(); });
+                       
                     }
                    
                     var valorMasGrande = PAN; // Suponemos que el primer número es el más grande inicialmente
@@ -1219,10 +1251,7 @@ require(["dojo/dom",
                 dom.byId("chartbar18").style.display = "none"
                 
         });
-       /* on(dom.byId("CG19"), "mouseout", function(){
-                dom.byId("ZonaGbarras").style.display = "none"
-                dom.byId("chartbar").style.display = "none"
-        });*/
+      
         on(dom.byId("CG18"), "mouseover", function(){
           if(flag18 != 0){ 
                 dom.byId("ZonaGbarras").style.display = "block"
@@ -1233,10 +1262,7 @@ require(["dojo/dom",
                 dom.byId("chartbar16").style.display = "none"
                 dom.byId("chartbar").style.display = "none"
         });
-       /* on(dom.byId("CG18"), "mouseout", function(){
-                dom.byId("ZonaGbarras").style.display = "none"
-                dom.byId("chartbar18").style.display = "none"
-        });*/
+       
         on(dom.byId("CG16"), "mouseover", function(){
           if(flag16 != 0){
                 dom.byId("ZonaGbarras").style.display = "block"
