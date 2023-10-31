@@ -115,6 +115,7 @@
     color:#000000;
     border-radius: 10px; 
     padding: 10px;
+    
 }
 
 .chart-containerBar {
@@ -138,7 +139,7 @@
   }
 </script>
 <script>
-var map, tb, Lnominal = 0, votaron = 0,  Lnominal16 = 0, Tvot16 = 0, Lnominal18 = 0, Tvot18 = 0;
+var map, tb, Lnominal = 0, votaron = 0,  Lnominal16 = 0, Tvot16 = 0, Lnominal18 = 0, Tvot18 = 0, flag19 = 0, flag18 = 0, flag16 = 0;
 let myChart, myChart1, myChart2, ChartBar, ChartBar18, ChartBar16;
 
 require(["dojo/dom",
@@ -712,7 +713,7 @@ require(["dojo/dom",
         
         function Elecciones16(queryResults){
           var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, PANAL= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, INP= 0, coali1 = 0, coali2 = 0;
-                  Lnominal16 = 0; Tvot16 = 0;
+                  Lnominal16 = 0; Tvot16 = 0; flag16 = 0;
                   var ChartPartidos16 = [], NombrePartido16 = [], BackColor16 = [], BorderColor16 = [];
                     if (queryResults.features.length == 0) {
                       document.getElementById("Contenedor").style.display= "none";
@@ -786,17 +787,19 @@ require(["dojo/dom",
                   //Se define cual es la candidatura o coalision ganadora
                   var VMG = valorMasGrande;
                   if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG16").src = "./images/PAN_PT_PANAL_PCPP_PSI.png"; dom.byId("CGP16").value = ((coali1/Tvot16)*100).toLocaleString() + "%";
-                  ChartPartidos16[0] = PAN;  ChartPartidos16[1] = PT;  ChartPartidos16[2] = PANAL;  ChartPartidos16[3]=PCPP;  ChartPartidos16[4] = PSI;
+                  ChartPartidos16[0] = ((PAN/coali1)*100);  ChartPartidos16[1] = ((PT/coali1)*100);  ChartPartidos16[2] = ((PANAL/coali1)*100);  ChartPartidos16[3]=((PCPP/coali1)*100);  ChartPartidos16[4] = ((PSI/coali1)*100);
                   NombrePartido16[0] = "PAN";  NombrePartido16[1] = "PT";  NombrePartido16[2] = "PANAL";  NombrePartido16[3] = "PCPP";  NombrePartido16[4] = "PSI";
                   BackColor16[0] = 'rgba(28, 146, 218, 1)';  BackColor16[1] = 'rgba(230, 76, 0, 1)';  BackColor16[2] = 'rgba(0, 164, 172, 1)';  BackColor16[3] = 'rgba(241, 103, 37, 1)';  BackColor16[4] = 'rgba(215, 37, 49, 1)'; 
                   BorderColor16[0] = 'rgba(28, 146, 218, 1)'; BorderColor16[1] = 'rgba(230, 76, 0, 1)'; BorderColor16[2] = 'rgba(0, 164, 172, 1)'; BorderColor16[3] = 'rgba(241, 103, 37, 1)'; BorderColor16[4] = 'rgba(215, 37, 49, 1)';
+                  flag16 = 1;
                 }
                   if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG16").src = "./images/PRI_PVEM_ES.png"; dom.byId("CGP16").value = ((coali2/Tvot16)*100).toLocaleString() + "%";
                   NombrePartido16.splice(2, 2); ChartPartidos16.splice(2, 2);  BackColor16.splice(2, 2); BorderColor16.splice(2, 2); 
-                  ChartPartidos16[0] = PRI;  ChartPartidos16[1] = PVEM;  ChartPartidos16[2] = ES;
+                  ChartPartidos16[0] = ((PRI/coali2)*100);  ChartPartidos16[1] = ((PVEM/coali2)*100);  ChartPartidos16[2] = ((ES/coali2)*100);
                   NombrePartido16[0] = "PRI"; NombrePartido16[1] = "PVEM";  NombrePartido16[2] = "ES";
                   BackColor16[0] = 'rgba(8,148,60, 1)';  BackColor16[1] = 'rgba(152,230,0, 1)';  BackColor16[2] = 'rgba(121,53,142, 1)';
                   BorderColor16[0] = 'rgba(8,148,60, 1)'; BorderColor16[1] = 'rgba(152,230,0, 1)'; BorderColor16[2] = 'rgba(121,53,142, 1)';
+                  flag16 = 1;
                 }
                 //GRAFICA DE BARRAS 2016
                 var Gbarras16 = document.getElementById("chartbar16").getContext('2d');
@@ -809,7 +812,7 @@ require(["dojo/dom",
                         data: {
                             labels: NombrePartido16,
                             datasets: [{
-                                label: 'Desgloce de votos',
+                                label: '',
                                 data: ChartPartidos16,
                                 backgroundColor: BackColor16,
                                 borderColor: BorderColor16,
@@ -817,20 +820,37 @@ require(["dojo/dom",
                             }]
                         },
                         options: {
-                            tooltips: {
-                                callbacks: {
-                                    label: function(tooltipItem, data) {
-                                        return tooltipItem.yLabel.toLocaleString();
-                                    }
+                            plugins: {
+                              tooltip: {
+                              callbacks: {
+                                label: function (context) {
+                                  let label = context.dataset.label || '';
+                          
+                                  if (context.parsed.y !== null) {
+                                    label += (context.parsed.y).toFixed(2);
+                                  }
+                                  if (label) {
+                                    label += ' % De los Votos';
+                                  }
+                                  return 'Obtuvo ' + label;
                                 }
+                              }
+                            },
+                            title: {
+                              display: true,
+                              text: 'Desglose de Votos X Coalición',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
                             }
+                          }
                         }
                     }); 
         }
 
         function Elecciones18(queryResults){
           var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, PCPP= 0, PSI= 0, MORENA= 0, ES= 0, TOTv = 0,coali1 = 0, coali2 = 0;
-                  Lnominal18 = 0, Tvot18 = 0
+                  Lnominal18 = 0; Tvot18 = 0; flag18 = 0;
           var ChartPartidos1 = [], NombrePartido18 = [], BackColor = [], BorderColor = [];
                   if (queryResults.features.length == 0) {
                     document.getElementById("Contenedor").style.display= "none";
@@ -883,17 +903,19 @@ require(["dojo/dom",
                   if (ES > valorMasGrande)   {valorMasGrande = ES; fuerzaP = "ENCUENTRO SOCIAL";  }
                   var VMG = valorMasGrande;//Coalicion ganadora
                   if (coali1 > VMG)  {VMG = coali1; document.getElementById("CG18").src = "./images/PAN_PRD_MC_PCPP_PSI.png"; dom.byId("CGP18").value = ((coali1/Tvot18)*100).toLocaleString() + "%";
-                  ChartPartidos1[0] = PAN;  ChartPartidos1[1] = PRD;  ChartPartidos1[2] = MC;  ChartPartidos1[3]=PCPP;  ChartPartidos1[4] = PSI;
+                  ChartPartidos1[0] = ((PAN/coali1)*100);  ChartPartidos1[1] = ((PRD/coali1)*100);  ChartPartidos1[2] = ((MC/coali1)*100);  ChartPartidos1[3]=((PCPP/coali1)*100);  ChartPartidos1[4] = ((PSI/coali1)*100);
                   NombrePartido18[0] = "PAN";  NombrePartido18[1] = "PRD";  NombrePartido18[2] = "MC";  NombrePartido18[3] = "PCPP";  NombrePartido18[4] = "PSI";
                   BackColor[0] = 'rgba(28,146,218, 1)';  BackColor[1] = 'rgba(255,203,1, 1)';  BackColor[2] = 'rgba(255,131,0, 1)';  BackColor[3] = 'rgba(0,77,168, 1)';  BackColor[4] = 'rgba(245,122,122, 1)'; 
                   BorderColor[0] = 'rgba(28,146,218, 1)'; BorderColor[1] = 'rgba(255,203,1, 1)'; BorderColor[2] = 'rgba(255,131,0, 1)'; BorderColor[3] = 'rgba(0,77,168, 1)'; BorderColor[4] = 'rgba(245,122,122, 1)';
+                  flag18 = 1;
                 }
                   if (coali2 > VMG)  {VMG = coali2; document.getElementById("CG18").src = "./images/PT_MORENA_ES.png"; dom.byId("CGP18").value = ((coali2/Tvot18)*100).toLocaleString() + "%";
                   NombrePartido18.splice(2, 2); ChartPartidos1.splice(2, 2);  BackColor.splice(2, 2); BorderColor.splice(2, 2); 
-                  ChartPartidos1[0] = PT;  ChartPartidos1[1] = MORENA;  ChartPartidos1[2] = ES;
+                  ChartPartidos1[0] = ((PT/coali2)*100);  ChartPartidos1[1] = ((MORENA/coali2)*100);  ChartPartidos1[2] = ((ES/coali2)*100);
                   NombrePartido18[0] = "PT"; NombrePartido18[1] = "MORENA";  NombrePartido18[2] = "ES";
                   BackColor[0] = 'rgba(230,76,0,1)';  BackColor[1] = 'rgba(181, 38, 30, 1)';  BackColor[2] = 'rgba(121, 53, 142, 1)';
                   BorderColor[0] = 'rgba(230,76,0,1)'; BorderColor[1] = 'rgba(181, 38, 30, 1)'; BorderColor[2] = 'rgba(121, 53, 142, 1)';
+                  flag18 = 1;
                 }
 
                   //GRAFICA DE BARRAS 2018
@@ -907,7 +929,7 @@ require(["dojo/dom",
                         data: {
                             labels: NombrePartido18,
                             datasets: [{
-                                label: 'Desgloce de votos',
+                                label: '',
                                 data: ChartPartidos1,
                                 backgroundColor: BackColor,
                                 borderColor: BorderColor,
@@ -915,24 +937,41 @@ require(["dojo/dom",
                             }]
                         },
                         options: {
-                            tooltips: {
-                                callbacks: {
-                                    label: function(tooltipItem, data) {
-                                        return tooltipItem.yLabel.toLocaleString();
-                                    }
+                            plugins: {
+                              tooltip: {
+                              callbacks: {
+                                label: function (context) {
+                                  let label = context.dataset.label || '';
+                          
+                                  if (context.parsed.y !== null) {
+                                    label += (context.parsed.y).toFixed(2);
+                                  }
+                                  if (label) {
+                                    label += ' % De los Votos';
+                                  }
+                                  return 'Obtuvo ' + label;
                                 }
+                              }
+                            },
+                            title: {
+                              display: true,
+                              text: 'Desglose de Votos X Coalición',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
                             }
+                          }
                         }
                     });
-
+                 
         }
 
         function Elecciones19(Results){
                     var Tmun = 0, mun, cont = 0;
                     var PAN = 0, PRI= 0, PRD= 0, PT= 0, PVEM= 0, MC= 0, MORENA= 0, coali1 = 0, coali2 = 0;
-                    Lnominal = 0, votaron = 0
+                    Lnominal = 0; votaron = 0; flag19 = 0;
                     var dataChart = [];
-                    var ChartPartidos = [], NombrePartido = [];
+                    var ChartPartidos = [], NombrePartido = [], BackColor19 = [], BorderColor19 = [];
                    // var dataChart18 = []; 
 
                     if (Results.features.length == 0) {
@@ -965,24 +1004,8 @@ require(["dojo/dom",
                           coali1 += coali1Completo;
                           var coali2Completo = feature.attributes["PT_PVEM_MORENA_COMPLETO"];
                           coali2 += coali2Completo;
-                           // fuerzaP19.push(feature.attributes["COALICION_O_PARTIDO_GANADOR"]);//Genero el array de ganadores
-                 
-                            /*dom.byId("municipio").value = mun;
-                           /* var p_totalM = feature.attributes["POBMAS"];
-                            var p_totalF = feature.attributes["POBFEM"];
-                            totalPM += p_totalM;
-                            totalPF += p_totalF;*/
-
-                           /* var p_totalM18 = feature.attributes["P_18YMAS_M"];
-                            var p_totalF18 = feature.attributes["P_18YMAS_F"];
-                            totalPM18 += p_totalM18;
-                            totalPF18 += p_totalF18*/
-
                         });
                         var Nvotaron = Lnominal - votaron;
-                        
-                       /* dataChart18.push(totalPF18);
-                        dataChart18.push(totalPM18);*/
                     }
                   var valorMasGrande = PAN; // Suponemos que el primer número es el más grande inicialmente
                   var fuerzaP = "PAN"; 
@@ -1004,18 +1027,20 @@ require(["dojo/dom",
                   if (coali1 > VMG)  {
                     VMG = coali1; document.getElementById("CG19").src = "./images/PAN_PRD_MC.png"; 
                     dom.byId("CGP19").value = ((coali1/votaron)*100).toLocaleString() + "%";
-                    ChartPartidos.push(PAN); console.log(PAN + " 2019");
-                    ChartPartidos.push(PRD);
-                    ChartPartidos.push(MC);
-                    NombrePartido.push("PAN");NombrePartido.push("PRD");NombrePartido.push("MC");
+                    ChartPartidos[0] = ((PAN/coali1)*100);  ChartPartidos[1] = ((PRD/coali1)*100); ChartPartidos[2] = ((MC/coali1)*100);
+                    NombrePartido[0] = "PAN"; NombrePartido[1] = "PRD" ;NombrePartido[2] = "MC";
+                    BackColor19[0] = 'rgba(28,146,218, 1)';  BackColor19[1] = 'rgba(255,203,1, 1)';  BackColor19[2] = 'rgba(255,131,0, 1)';
+                  BorderColor19[0] = 'rgba(28,146,218, 1)'; BorderColor19[1] = 'rgba(255,203,1, 1)'; BorderColor19[2] = 'rgba(255,131,0, 1)';
+                  flag19 = 1;
                   }
                   if (coali2 > VMG)  {
                     VMG = coali2; document.getElementById("CG19").src = "./images/PT_PVEM_MORENA.png"; 
                     dom.byId("CGP19").value = ((coali2/votaron)*100).toLocaleString() + "%";
-                    ChartPartidos.push(PT);
-                    ChartPartidos.push(PVEM);
-                    ChartPartidos.push(MORENA);  console.log(MORENA + " 2019");
-                    NombrePartido.push("PT");NombrePartido.push("PV");NombrePartido.push("MORENA");
+                    ChartPartidos[0] = ((PT/coali2)*100);  ChartPartidos[1] = ((PVEM/coali2)*100); ChartPartidos[2] = ((MORENA/coali2)*100);
+                    NombrePartido[0] = "PT"; NombrePartido[1] = "PVEM" ;NombrePartido[2] = "MORENA";
+                    BackColor19[0] = 'rgba(230,76,0,1)';  BackColor19[1] = 'rgba(152,230,0, 1)';  BackColor19[2] = 'rgba(181, 38, 30, 1)';
+                  BorderColor19[0] = 'rgba(230,76,0,1)'; BorderColor19[1] = 'rgba(152,230,0, 1)'; BorderColor19[2] = 'rgba(181, 38, 30, 1)';
+                  flag19 = 1;
                   }
                   //SE INTRODUCEN LOS DATOS  EN LA GRAFICA PIE
                     porcentaje = (votaron / Lnominal) * 100; Nporcentaje = (Nvotaron / Lnominal) * 100;
@@ -1122,29 +1147,45 @@ require(["dojo/dom",
                         data: {
                             labels: [NombrePartido[0],NombrePartido[1],NombrePartido[2]],
                             datasets: [{
-                                label: 'Desgloce de votos',
+                                label:'',
                                 data: ChartPartidos,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 1)',
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)'
-                                ],
-                                borderColor: [
-                                    'rgba(255, 99, 132, 1)',
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)'
-                                ],
-                                borderWidth: 1
+                                backgroundColor: BackColor19,
+                                borderColor: BorderColor19,
+                                borderWidth: 1,
                             }]
                         },
                         options: {
-                            tooltips: {
-                                callbacks: {
-                                    label: function(tooltipItem, data) {
-                                        return tooltipItem.yLabel.toLocaleString();
-                                    }
+                          plugins: {
+                            tooltip: {
+                              callbacks: {
+                                label: function (context) {
+                                  let label = context.dataset.label || '';
+                          
+                                  if (context.parsed.y !== null) {
+                                    label += (context.parsed.y).toFixed(2);
+                                  }
+                                  if (label) {
+                                    label += ' % De los Votos';
+                                  }
+                                  return 'Obtuvo ' + label;
                                 }
+                              }
+                            },
+                            title: {
+                              display: true,
+                              text: 'Desglose de Votos X Coalición',
+                              font: { size: 17 },
+                              padding: 1,
+                              color: '#000000'
+                            },
+                            scales: {
+                              yAxes: [{
+                                ticks: {
+                                  beginAtZero: true
+                                }
+                              }]
                             }
+                          }
                         }
                     });
         }
@@ -1168,29 +1209,49 @@ require(["dojo/dom",
           }
         });
         on(dom.byId("CG19"), "mouseover", function(){
-                dom.byId("ZonaGbarras").style.display = "block"
-                dom.byId("chartbar").style.display = "block"
-
+          if(flag19 != 0){
+               dom.byId("ZonaGbarras").style.display = "block"
+               dom.byId("chartbar").style.display = "block"
+          }else{
+            dom.byId("ZonaGbarras").style.display = "none"
+          }
+                dom.byId("chartbar16").style.display = "none"
+                dom.byId("chartbar18").style.display = "none"
+                
         });
-        on(dom.byId("CG19"), "mouseout", function(){
+       /* on(dom.byId("CG19"), "mouseout", function(){
                 dom.byId("ZonaGbarras").style.display = "none"
                 dom.byId("chartbar").style.display = "none"
-        });
+        });*/
         on(dom.byId("CG18"), "mouseover", function(){
+          if(flag18 != 0){ 
                 dom.byId("ZonaGbarras").style.display = "block"
                 dom.byId("chartbar18").style.display = "block"
+          }else{
+            dom.byId("ZonaGbarras").style.display = "none"
+          }
+                dom.byId("chartbar16").style.display = "none"
+                dom.byId("chartbar").style.display = "none"
         });
-        on(dom.byId("CG18"), "mouseout", function(){
+       /* on(dom.byId("CG18"), "mouseout", function(){
                 dom.byId("ZonaGbarras").style.display = "none"
                 dom.byId("chartbar18").style.display = "none"
-        });
+        });*/
         on(dom.byId("CG16"), "mouseover", function(){
+          if(flag16 != 0){
                 dom.byId("ZonaGbarras").style.display = "block"
                 dom.byId("chartbar16").style.display = "block"
+          }else{dom.byId("ZonaGbarras").style.display = "none"}
+                dom.byId("chartbar18").style.display = "none"
+                dom.byId("chartbar").style.display = "none"
+
         });
-        on(dom.byId("CG16"), "mouseout", function(){
+        on(dom.byId("map"), "mouseover", function(){
                 dom.byId("ZonaGbarras").style.display = "none"
-                dom.byId("chartbar16").style.display = "none"
+
+               dom.byId("chartbar16").style.display = "none"
+               dom.byId("chartbar18").style.display = "none"
+               dom.byId("chartbar").style.display = "none"
         });
        
   });
@@ -1446,8 +1507,8 @@ require(["dojo/dom",
           <td>2019</td>
         </tr>
         <tr>
-          <td id=""><input type="image" id="CG16" width="85px" height="85px"/></td>
-          <td id=""><input type="image" id="CG18" width="85px" height="85px"/></td>
+          <td><input type="image" id="CG16" width="85px" height="85px" /></td>
+          <td><input type="image" id="CG18" width="85px" height="85px"/></td>
           <td><input type="image" id="CG19" width="85px" height="85px"/></td>
         </tr>
         
